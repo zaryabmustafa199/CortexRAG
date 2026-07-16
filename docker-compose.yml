@@ -1,0 +1,294 @@
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL with pgvector extension
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: cortexrag_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+    ports:
+      - "5434:5432"    # Host 5434 → Container 5432 (avoids conflict with other projects)
+    networks:
+      - app
+      - worker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # Redis — cache + Celery broker + pub/sub
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: cortexrag_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6381:6379"    # Host 6381 → Container 6379 (avoids conflict with other projects)
+    networks:
+      - app
+      - worker
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # MinIO — private S3-compatible object storage
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: cortexrag_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9010:9000"    # Host 9010 → Container 9000 S3 API (avoids conflict)
+      - "9011:9001"    # Host 9011 → Container 9001 MinIO Console UI (avoids conflict)
+    networks:
+      - app
+      - worker
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # MinIO bucket initializer — runs once to create the documents bucket
+  # ---------------------------------------------------------------------------
+  minio_init:
+    image: minio/mc:latest
+    container_name: cortexrag_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - app
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY};
+      mc mb --ignore-existing local/${MINIO_BUCKET};
+      mc anonymous set none local/${MINIO_BUCKET};
+      echo 'MinIO bucket initialized: ${MINIO_BUCKET}';
+      "
+    environment:
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+
+  # ---------------------------------------------------------------------------
+  # Elasticsearch — BM25 full-text search
+  # ---------------------------------------------------------------------------
+  elasticsearch:
+    image: elasticsearch:8.13.0
+    container_name: cortexrag_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9210:9200"    # Host 9210 → Container 9200 (avoids conflict with other projects)
+    networks:
+      - app
+      - worker
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -qv '\"status\":\"red\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  # ---------------------------------------------------------------------------
+  # Ollama — local LLM + embedding inference
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: cortexrag_ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_models:/root/.ollama
+      - ./scripts/ollama_pull.sh:/ollama_pull.sh:ro
+    ports:
+      - "11436:11434"  # Host 11436 → Container 11434 (avoids conflict with other projects)
+    networks:
+      - app
+      - worker
+    # Pull required models on first start
+    entrypoint: >
+      /bin/sh -c "ollama serve & sleep 5 && sh /ollama_pull.sh && wait"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # FastAPI Backend
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: cortexrag_backend
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./backend:/app  # hot-reload in dev
+    ports:
+      - "8002:8000"    # Host 8002 → Container 8000 (avoids conflict with other projects)
+    networks:
+      - app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ---------------------------------------------------------------------------
+  # Celery Worker — ISOLATED NETWORK (no internet access for security)
+  # Handles: ingestion, embedding, notification, cleanup
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: cortexrag_worker
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./backend:/app
+    networks:
+      - worker   # isolated — no outbound internet; only reaches postgres/redis/minio/ollama
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    command: >
+      celery -A app.worker.celery_app worker
+      --loglevel=info
+      --concurrency=2
+      --max-tasks-per-child=50
+      -Q ingestion,embedding,notification,cleanup
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.worker.celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # Next.js Frontend
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: base
+    container_name: cortexrag_frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3002:3000"    # Host 3002 → Container 3000 (avoids conflict with other projects)
+    networks:
+      - app
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+    command: npm run dev
+    depends_on:
+      - backend
+
+  # ---------------------------------------------------------------------------
+  # Caddy — reverse proxy with auto TLS
+  # ---------------------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    container_name: cortexrag_caddy
+    restart: unless-stopped
+    ports:
+      - "8080:80"      # Host 8080 → Container 80 (avoids conflict with other projects)
+      - "8443:443"     # Host 8443 → Container 443 (avoids conflict with other projects)
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - app
+    depends_on:
+      - backend
+      - frontend
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  app:
+    driver: bridge
+    name: cortexrag_app
+
+  worker:
+    driver: bridge
+    name: cortexrag_worker
+    internal: true  # NO outbound internet access — security isolation for parsers
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  pg_data:
+  redis_data:
+  minio_data:
+  es_data:
+  ollama_models:
+  caddy_data:
+  caddy_config:

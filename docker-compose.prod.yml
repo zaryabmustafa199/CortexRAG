@@ -1,0 +1,54 @@
+# =============================================================================
+# CortexRAG — Production Docker Compose Override
+# =============================================================================
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    ports: !reset [] # Close port 5432 in production
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    ports: !reset [] # Close port 6379 in production
+
+  # ── MinIO ───────────────────────────────────────────────────────────────────
+  minio:
+    ports: !reset [] # Close ports 9000 and 9001 in production
+
+  # ── Elasticsearch ───────────────────────────────────────────────────────────
+  elasticsearch:
+    ports: !reset [] # Close port 9200 in production
+
+  # ── Ollama ──────────────────────────────────────────────────────────────────
+  ollama:
+    ports: !reset [] # Close port 11434 in production
+
+  # ── FastAPI Backend ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production # Use production multi-stage target
+    volumes: !reset [] # Remove development code mount
+    ports: !reset [] # Close port 8000 in production
+    command: [] # Use production CMD from Dockerfile (uvicorn with workers, no reload)
+
+  # ── Celery Worker ───────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production # Use production multi-stage target
+    volumes: !reset [] # Remove development code mount
+
+  # ── Next.js Frontend ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner # Use runner stage from frontend Dockerfile
+    volumes: !reset [] # Remove development code mount
+    ports: !reset [] # Close port 3000 in production
+    command: [] # Use default production CMD (npm start)
+    environment:
+      - NEXT_PUBLIC_API_URL=/api/v1 # Use relative path since both sit behind reverse proxy

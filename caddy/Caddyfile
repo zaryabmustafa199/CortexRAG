@@ -1,0 +1,54 @@
+# Development and Production Caddyfile
+
+:80 {
+    # Block internal admin endpoints from external traffic
+    handle /admin/* {
+        respond "Access Denied" 403
+    }
+
+    # Route API and docs to FastAPI backend
+    handle /api/* {
+        reverse_proxy backend:8000 {
+            health_uri /health
+            health_interval 15s
+            health_timeout 5s
+        }
+    }
+    
+    handle /docs {
+        reverse_proxy backend:8000
+    }
+    
+    handle /redoc {
+        reverse_proxy backend:8000
+    }
+    
+    handle /openapi.json {
+        reverse_proxy backend:8000
+    }
+
+    # Health check endpoint — must be explicitly routed to backend BEFORE
+    # the catch-all below, otherwise Next.js catches it and redirects to /login
+    handle /health {
+        reverse_proxy backend:8000
+    }
+
+    # Route all other traffic to Next.js frontend
+    handle {
+        reverse_proxy frontend:3000
+    }
+
+    # Basic security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+
+    # Access log
+    log {
+        output stdout
+        format json
+    }
+}
