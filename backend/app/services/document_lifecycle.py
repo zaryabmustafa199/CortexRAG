@@ -10,6 +10,7 @@ Orchestrates secure document deactivation and cascade purging across storage lay
 from __future__ import annotations
 
 import uuid
+
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,9 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.exceptions import DocumentNotFoundException
 from app.core.redis_client import redis_client
-from app.models.document import Document, ParentChunk, LeafChunk
-from app.services.storage_service import delete_file
+from app.models.document import Document, LeafChunk, ParentChunk
 from app.services.bm25_service import es_client
+from app.services.storage_service import delete_file
 
 logger = structlog.get_logger()
 
@@ -85,7 +86,7 @@ class DocumentLifecycleService:
             # Redis scan to locate matching keys
             for key in redis_client.scan_iter(f"cache:{workspace_id}:*"):
                 cache_keys.append(key)
-            
+
             if cache_keys:
                 redis_client.delete(*cache_keys)
                 log.info("redis_query_cache_invalidated", keys_count=len(cache_keys))

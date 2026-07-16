@@ -9,8 +9,8 @@ from __future__ import annotations
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.document import Document, ParentChunk, LeafChunk
-from app.services.chunking_service import build_parent_chunks, build_leaf_chunks
+from app.models.document import Document, LeafChunk, ParentChunk
+from app.services.chunking_service import build_leaf_chunks, build_parent_chunks
 
 logger = structlog.get_logger()
 
@@ -30,7 +30,7 @@ async def chunk_and_save_document(
 
     # 1. Build parent chunks from the page stream
     parent_data_list = await build_parent_chunks(pages)
-    
+
     parent_models = []
     leaf_models = []
 
@@ -58,7 +58,7 @@ async def chunk_and_save_document(
         )
         db.add(parent)
         parent_models.append(parent)
-        
+
         # Flush parent to get generated UUID
         await db.flush()
 
@@ -91,8 +91,9 @@ async def chunk_and_save_document(
     await db.commit()
 
     # 3. Index leaf chunks in Elasticsearch for BM25 search
-    from app.services.bm25_service import index_leaf_chunk
     import asyncio
+
+    from app.services.bm25_service import index_leaf_chunk
     es_tasks = [
         index_leaf_chunk(leaf.id, leaf.content, leaf.workspace_id, leaf.section_title)
         for leaf in leaf_models

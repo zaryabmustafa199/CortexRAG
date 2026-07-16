@@ -79,11 +79,11 @@ class Document(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="documents")  # type: ignore[name-defined]
-    upload_job: Mapped["UploadJob"] = relationship(
+    workspace: Mapped[Workspace] = relationship("Workspace", back_populates="documents")  # type: ignore[name-defined]
+    upload_job: Mapped[UploadJob] = relationship(
         "UploadJob", back_populates="document", uselist=False, cascade="all, delete-orphan"
     )
-    parent_chunks: Mapped[list["ParentChunk"]] = relationship(
+    parent_chunks: Mapped[list[ParentChunk]] = relationship(
         "ParentChunk", back_populates="document", cascade="all, delete-orphan"
     )
 
@@ -118,7 +118,7 @@ class UploadJob(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    document: Mapped["Document"] = relationship("Document", back_populates="upload_job")
+    document: Mapped[Document] = relationship("Document", back_populates="upload_job")
 
     def __repr__(self) -> str:
         return f"<UploadJob id={self.id} status={self.status!r}>"
@@ -151,8 +151,8 @@ class ParentChunk(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    document: Mapped["Document"] = relationship("Document", back_populates="parent_chunks")
-    leaf_chunks: Mapped[list["LeafChunk"]] = relationship(
+    document: Mapped[Document] = relationship("Document", back_populates="parent_chunks")
+    leaf_chunks: Mapped[list[LeafChunk]] = relationship(
         "LeafChunk", back_populates="parent", cascade="all, delete-orphan"
     )
 
@@ -187,8 +187,8 @@ class LeafChunk(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    parent: Mapped["ParentChunk"] = relationship("ParentChunk", back_populates="leaf_chunks")
-    embeddings: Mapped[list["ChunkEmbedding"]] = relationship(
+    parent: Mapped[ParentChunk] = relationship("ParentChunk", back_populates="leaf_chunks")
+    embeddings: Mapped[list[ChunkEmbedding]] = relationship(
         "ChunkEmbedding", back_populates="chunk", cascade="all, delete-orphan"
     )
 
@@ -222,7 +222,7 @@ class ChunkEmbedding(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    chunk: Mapped["LeafChunk"] = relationship("LeafChunk", back_populates="embeddings")
+    chunk: Mapped[LeafChunk] = relationship("LeafChunk", back_populates="embeddings")
 
     # ── Table-level index (HNSW for vector cosine search) ─────────────────────
     # NOTE: The HNSW index cannot be expressed in SQLAlchemy mapped columns —

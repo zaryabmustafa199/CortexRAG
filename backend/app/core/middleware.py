@@ -11,10 +11,11 @@ from __future__ import annotations
 
 import secrets
 import time
-from typing import Any, MutableMapping
+from collections.abc import MutableMapping
+from typing import Any
 
 import structlog
-from starlette.types import ASGIApp, Scope, Receive, Send
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 logger = structlog.get_logger()
 

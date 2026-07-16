@@ -8,10 +8,10 @@ Implements unified stream generators yielding tokens with strict timeouts.
 from __future__ import annotations
 
 import json
-import asyncio
+from collections.abc import AsyncGenerator
+
 import httpx
 import structlog
-from typing import AsyncGenerator
 
 from app.core.config import settings
 from app.core.exceptions import LLMProviderException
@@ -80,7 +80,7 @@ class LLMService:
                             yield token
                         if data.get("done", False):
                             break
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             logger.error("ollama_stream_timeout")
             raise LLMProviderException("Ollama response stream timed out.") from exc
         except Exception as exc:
@@ -126,7 +126,7 @@ class LLMService:
                         line = line.strip()
                         if not line or not line.startswith("data: "):
                             continue
-                        
+
                         # Strip "data: " prefix
                         data_str = line[6:]
                         if data_str == "[DONE]":
@@ -136,12 +136,12 @@ class LLMService:
                         choices = data.get("choices", [])
                         if not choices:
                             continue
-                        
+
                         delta = choices[0].get("delta", {})
                         token = delta.get("content", "")
                         if token:
                             yield token
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             logger.error("openai_stream_timeout")
             raise LLMProviderException("OpenAI response stream timed out.") from exc
         except Exception as exc:

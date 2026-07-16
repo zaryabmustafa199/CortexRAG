@@ -6,17 +6,18 @@ Splits document page lists into ParentChunks (~3000 tokens) and LeafChunks (~400
 """
 from __future__ import annotations
 
-import re
 import asyncio
-from typing import Any, Optional
+import re
+from typing import Any
+
+import structlog
 import tiktoken
 from tiktoken import Encoding
-import structlog
 
 logger = structlog.get_logger()
 
 # Tiktoken tokenizer — may be None if the tokenizer download fails
-tokenizer: Optional[Encoding] = None
+tokenizer: Encoding | None = None
 try:
     tokenizer = tiktoken.get_encoding("cl100k_base")
 except Exception as exc:
@@ -188,12 +189,12 @@ async def build_parent_chunks(pages: list[dict[str, int | str]]) -> list[dict[st
         text = str(page["text"]).strip()
         if not text:
             continue
-            
+
         page_tokens = token_len(text)
-        
+
         # Check if page has a new section header
         detected = detect_section_header(text)
-        
+
         # If a header is detected or size limits exceeded, flush current accumulator
         if (detected or len(current_pages) >= 5 or current_tokens + page_tokens > 3000) and current_pages:
             parent_text = "\n\n".join(current_pages)
@@ -204,7 +205,7 @@ async def build_parent_chunks(pages: list[dict[str, int | str]]) -> list[dict[st
                 "page_end": page_num - 1,
                 "token_count": token_len(parent_text),
             })
-            
+
             # Reset counters
             current_pages = []
             current_tokens = 0

@@ -7,6 +7,7 @@ Rewrites follow-up questions into standalone queries based on message history.
 from __future__ import annotations
 
 import asyncio
+
 import httpx
 import structlog
 

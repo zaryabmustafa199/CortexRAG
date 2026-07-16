@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import FileParsingException, StorageException
 from app.models.document import Document, DocumentStatus
-from app.services.storage_service import get_file
 from app.services.parser_service import extract_text_streaming
+from app.services.storage_service import get_file
 
 logger = structlog.get_logger()
 
@@ -41,7 +41,7 @@ async def extract_document_text(
         # Extract text page-by-page
         pages = []
         mime_type = document.mime_type or "application/pdf"
-        
+
         for page_data in extract_text_streaming(file_bytes, mime_type):
             pages.append(page_data)
 

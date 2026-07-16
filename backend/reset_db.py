@@ -1,12 +1,10 @@
 import asyncio
+
 from sqlalchemy import text
-from app.db.session import AsyncSessionLocal
 
 # Import all models to ensure metadata is compiled
-import app.models.user
-import app.models.workspace
-import app.models.document
-import app.models.query
+from app.db.session import AsyncSessionLocal
+
 
 async def main():
     async with AsyncSessionLocal() as session:

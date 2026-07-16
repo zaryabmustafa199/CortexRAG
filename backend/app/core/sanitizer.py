@@ -6,8 +6,10 @@ Input sanitization utilities using bleach.
 from __future__ import annotations
 
 from typing import Annotated
+
 import bleach  # type: ignore[import-untyped]
 from pydantic import BeforeValidator
+
 
 def sanitize_string(v: str | None) -> str | None:
     """Strip all HTML tags and attributes from the input string using bleach."""

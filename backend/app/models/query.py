@@ -65,12 +65,12 @@ class QuerySession(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="query_sessions")  # type: ignore[name-defined]
-    messages: Mapped[list["Message"]] = relationship(
+    workspace: Mapped[Workspace] = relationship("Workspace", back_populates="query_sessions")  # type: ignore[name-defined]
+    messages: Mapped[list[Message]] = relationship(
         "Message", back_populates="session", cascade="all, delete-orphan",
         order_by="Message.created_at"
     )
-    feedback: Mapped["FeedbackRecord | None"] = relationship(
+    feedback: Mapped[FeedbackRecord | None] = relationship(
         "FeedbackRecord", back_populates="session", uselist=False, cascade="all, delete-orphan"
     )
 
@@ -104,8 +104,8 @@ class Message(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    session: Mapped["QuerySession"] = relationship("QuerySession", back_populates="messages")
-    citations: Mapped[list["Citation"]] = relationship(
+    session: Mapped[QuerySession] = relationship("QuerySession", back_populates="messages")
+    citations: Mapped[list[Citation]] = relationship(
         "Citation", back_populates="message", cascade="all, delete-orphan"
     )
 
@@ -136,8 +136,8 @@ class Citation(Base):
     confidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    message: Mapped["Message"] = relationship("Message", back_populates="citations")
-    chunk: Mapped["LeafChunk | None"] = relationship("LeafChunk")  # type: ignore[name-defined]
+    message: Mapped[Message] = relationship("Message", back_populates="citations")
+    chunk: Mapped[LeafChunk | None] = relationship("LeafChunk")  # type: ignore[name-defined]
 
     def __repr__(self) -> str:
         return f"<Citation msg={self.message_id} chunk={self.chunk_id} page={self.page_number}>"
@@ -166,7 +166,7 @@ class FeedbackRecord(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    session: Mapped["QuerySession"] = relationship("QuerySession", back_populates="feedback")
+    session: Mapped[QuerySession] = relationship("QuerySession", back_populates="feedback")
 
     def __repr__(self) -> str:
         return f"<FeedbackRecord session={self.session_id} rating={self.rating}>"

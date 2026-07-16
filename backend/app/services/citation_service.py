@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import uuid
 from typing import Any
+
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 

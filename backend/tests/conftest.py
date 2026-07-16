@@ -1,4 +1,5 @@
 import os
+
 os.environ["JWT_SECRET"] = "mock_secret_strength_must_be_32_characters_long_min"
 os.environ["DATABASE_URL"] = "postgresql+asyncpg://cortexrag:cortexrag_dev_password@localhost:5434/cortexrag"
 os.environ["REDIS_URL"] = "redis://localhost:6381/0"
@@ -8,17 +9,18 @@ os.environ["MINIO_ENDPOINT"] = "localhost:9010"
 os.environ["MINIO_ACCESS_KEY"] = "cortexrag_minio"
 os.environ["MINIO_SECRET_KEY"] = "cortexrag_minio_secret"
 
-import pytest
 import uuid
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from fastapi.testclient import TestClient
 
-# Preload Base to resolve circular import dependency during testing
-from app.db.base import Base
-
-from app.main import create_app
 from app.core.deps import get_current_user, get_rls_db
+
+# Preload Base to resolve circular import dependency during testing
+from app.main import create_app
 from app.models.user import User
+
 
 @pytest.fixture
 def mock_db():
@@ -52,12 +54,12 @@ def mock_redis(monkeypatch):
 @pytest.fixture
 def client(mock_user, mock_db):
     app = create_app()
-    
+
     # Override authentication and DB session dependencies
     app.dependency_overrides[get_current_user] = lambda: mock_user
     app.dependency_overrides[get_rls_db] = lambda: mock_db
-    
+
     with TestClient(app) as test_client:
         yield test_client
-        
+
     app.dependency_overrides.clear()

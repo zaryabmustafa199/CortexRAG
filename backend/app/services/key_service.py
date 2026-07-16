@@ -8,12 +8,12 @@ from __future__ import annotations
 import hashlib
 import secrets
 import uuid
+
 import structlog
-from datetime import datetime
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AuthenticationException, ForbiddenException, CortexException
+from app.core.exceptions import AuthenticationException, ForbiddenException
 from app.models.user import APIKey, User
 
 logger = structlog.get_logger()

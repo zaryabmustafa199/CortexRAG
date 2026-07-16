@@ -6,6 +6,7 @@ Rate limiting using Redis.
 from __future__ import annotations
 
 import time
+
 import structlog
 
 from app.core.exceptions import RateLimitException

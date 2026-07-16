@@ -8,25 +8,26 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from typing import cast
-from fastapi import APIRouter, Depends, File, UploadFile, Request, Response
+
+from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user, get_rls_db
-from app.core.exceptions import UserNotFoundException, DocumentNotFoundException
+from app.core.exceptions import DocumentNotFoundException, UserNotFoundException
 from app.models.document import Document, ParentChunk, UploadJob
 from app.models.user import Profile, User
 from app.schemas.documents import (
-    DocumentPresignedUrlResponse,
-    UploadJobResponse,
-    DocumentResponse,
     DocumentDetailResponse,
+    DocumentPresignedUrlResponse,
+    DocumentResponse,
     ParentChunkSchema,
+    UploadJobResponse,
 )
-from app.services.upload_service import UploadService
-from app.services.storage_service import get_presigned_url
 from app.services.document_lifecycle import DocumentLifecycleService
+from app.services.storage_service import get_presigned_url
+from app.services.upload_service import UploadService
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -52,7 +53,7 @@ async def upload_document(
         raise UserNotFoundException("User profile not found.")
 
     correlation_id = getattr(request.state, "correlation_id", None)
-    
+
     upload_service = UploadService(db)
     job = await upload_service.handle_upload(
         workspace_id=workspace_id,

@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import re
 import uuid
-import structlog
 from pathlib import Path
+
+import structlog
 from fastapi import UploadFile
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import InvalidFileException, QuotaExceededException
@@ -49,7 +50,7 @@ class UploadService:
         Validate file, store in MinIO, create DB records, and trigger Celery task.
         """
         filename = file.filename or "unnamed_file"
-        
+
         # 1. Read file bytes
         content = await file.read()
         file_size = len(content)

@@ -13,7 +13,7 @@ Engineering rules applied:
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import structlog
 from sqlalchemy import select
@@ -25,7 +25,6 @@ from app.core.exceptions import (
     AuthenticationException,
     ConflictException,
     TokenRevokedException,
-    UserNotFoundException,
 )
 from app.core.redis_client import redis_client
 from app.core.security import (

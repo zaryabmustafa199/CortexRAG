@@ -8,6 +8,7 @@ from __future__ import annotations
 import datetime
 import uuid
 from decimal import Decimal
+
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

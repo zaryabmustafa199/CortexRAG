@@ -48,16 +48,16 @@ class User(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    profile: Mapped["Profile"] = relationship(
+    profile: Mapped[Profile] = relationship(
         "Profile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
-    api_keys: Mapped[list["APIKey"]] = relationship(
+    api_keys: Mapped[list[APIKey]] = relationship(
         "APIKey", back_populates="user", cascade="all, delete-orphan"
     )
-    usage_records: Mapped[list["UsageRecord"]] = relationship(
+    usage_records: Mapped[list[UsageRecord]] = relationship(
         "UsageRecord", back_populates="user", cascade="all, delete-orphan"
     )
-    workspace_memberships: Mapped[list["WorkspaceMember"]] = relationship(  # type: ignore[name-defined]
+    workspace_memberships: Mapped[list[WorkspaceMember]] = relationship(  # type: ignore[name-defined]
         "WorkspaceMember", back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -84,7 +84,7 @@ class Profile(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    user: Mapped["User"] = relationship("User", back_populates="profile")
+    user: Mapped[User] = relationship("User", back_populates="profile")
 
     def __repr__(self) -> str:
         return f"<Profile user_id={self.user_id} tier={self.tier!r}>"
@@ -109,7 +109,7 @@ class APIKey(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    user: Mapped["User"] = relationship("User", back_populates="api_keys")
+    user: Mapped[User] = relationship("User", back_populates="api_keys")
 
     def __repr__(self) -> str:
         return f"<APIKey id={self.id} name={self.name!r} active={self.is_active}>"
@@ -130,7 +130,7 @@ class UsageRecord(Base):
     cost_usd: Mapped[float] = mapped_column(Numeric(10, 6), default=0.0, nullable=False)
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    user: Mapped["User"] = relationship("User", back_populates="usage_records")
+    user: Mapped[User] = relationship("User", back_populates="usage_records")
 
     def __repr__(self) -> str:
         return f"<UsageRecord user={self.user_id} month={self.month} tokens={self.token_count}>"

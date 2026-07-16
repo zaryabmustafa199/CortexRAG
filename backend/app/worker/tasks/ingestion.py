@@ -6,21 +6,22 @@ Coordinates download, extraction, chunking, LLM summarization, and embedding gen
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
-import asyncio
 from typing import Any
+
 import structlog
 from sqlalchemy import select
 
-from app.core.exceptions import StorageException, FileParsingException, EmbeddingException
+from app.core.exceptions import EmbeddingException, FileParsingException, StorageException
 from app.core.redis_client import redis_client
 from app.db.session import AsyncSessionLocal, engine
 from app.models.document import Document, DocumentStatus, UploadJob
 from app.worker.celery_app import celery_app
-from app.worker.tasks.extraction import extract_document_text
 from app.worker.tasks.chunking import chunk_and_save_document
 from app.worker.tasks.embedding import embed_and_save_leaf_chunks
+from app.worker.tasks.extraction import extract_document_text
 
 logger = structlog.get_logger()
 
@@ -36,7 +37,7 @@ async def mark_job_as_failed(job_id: str, error_message: str) -> None:
         if job:
             job.status = "FAILED"
             job.error_message = error_message
-            
+
             doc_result = await db.execute(
                 select(Document).where(Document.id == job.document_id)
             )
@@ -44,7 +45,7 @@ async def mark_job_as_failed(job_id: str, error_message: str) -> None:
             if doc:
                 doc.status = DocumentStatus.FAILED
                 doc.error_message = error_message
-                
+
                 # Publish failure event
                 redis_client.publish(
                     f"cortex:notify:{doc.workspace_id}",

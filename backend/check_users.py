@@ -1,14 +1,11 @@
 import asyncio
+
 from sqlalchemy import select
-from app.db.session import AsyncSessionLocal
 
 # Import all models to configure registries
-import app.models.user
-import app.models.workspace
-import app.models.document
-import app.models.query
-
+from app.db.session import AsyncSessionLocal
 from app.models.user import User
+
 
 async def main():
     async with AsyncSessionLocal() as session:

@@ -10,7 +10,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import EmbeddingException
-from app.models.document import LeafChunk, ChunkEmbedding
+from app.models.document import ChunkEmbedding, LeafChunk
 from app.services.embedding_service import EmbeddingService
 
 logger = structlog.get_logger()

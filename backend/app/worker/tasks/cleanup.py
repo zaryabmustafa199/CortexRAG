@@ -6,16 +6,17 @@ Deletes physical binaries from MinIO before purging user DB records.
 """
 from __future__ import annotations
 
-import uuid
 import asyncio
+import uuid
 from typing import Any
+
 import structlog
 from sqlalchemy import select
 
 from app.db.session import AsyncSessionLocal, engine
+from app.models.document import Document
 from app.models.user import User
 from app.models.workspace import Workspace
-from app.models.document import Document
 from app.services.storage_service import delete_file
 from app.worker.celery_app import celery_app
 
@@ -33,14 +34,14 @@ async def run_user_data_purge(user_id: str) -> None:
         )
         workspaces = ws_result.scalars().all()
         workspace_ids = [ws.id for ws in workspaces]
-        
+
         # If user owns workspaces, fetch all documents in them
         if workspace_ids:
             doc_result = await db.execute(
                 select(Document).where(Document.workspace_id.in_(workspace_ids))
             )
             documents = doc_result.scalars().all()
-            
+
             # Delete each document binary from MinIO
             for doc in documents:
                 try:

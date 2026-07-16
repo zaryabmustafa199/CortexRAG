@@ -14,11 +14,10 @@ Exception handlers:
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import sentry_sdk
-import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -27,7 +26,11 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.exceptions import CortexException
 from app.core.logging import configure_logging, get_logger
-from app.core.middleware import CorrelationIDMiddleware, RLSContextMiddleware, SecurityHeadersMiddleware
+from app.core.middleware import (
+    CorrelationIDMiddleware,
+    RLSContextMiddleware,
+    SecurityHeadersMiddleware,
+)
 
 # ---------------------------------------------------------------------------
 # Logging — configure before anything else so early startup errors are captured
@@ -201,9 +204,10 @@ def create_app() -> FastAPI:
         """
         import httpx
         from sqlalchemy import text
+
         from app.core.redis_client import redis_client
-        from app.services.storage_service import minio_client
         from app.db.session import AsyncSessionLocal
+        from app.services.storage_service import minio_client
 
         postgres_ok = False
         redis_ok = False
@@ -272,6 +276,7 @@ def create_app() -> FastAPI:
         Internal administrative endpoint to check system safety configurations.
         """
         from sqlalchemy import text
+
         from app.db.session import AsyncSessionLocal
 
         # 1. Audit JWT Secret

@@ -1,4 +1,3 @@
-import pytest
 import re
 
 # LLM-as-judge prompts for RAG quality evaluation
@@ -41,12 +40,12 @@ def test_evaluation_prompt_generation():
     question = "What is the storage size limit for Free tier?"
     context = "Free tier profiles have a limit of 5 documents and 10MB of storage."
     answer = "The Free tier supports a maximum storage size of 10MB."
-    
+
     # 1. Format Context Precision Prompt
     precision_prompt = CONTEXT_PRECISION_PROMPT.format(question=question, context=context)
     assert question in precision_prompt
     assert context in precision_prompt
-    
+
     # 2. Format Groundedness Prompt
     groundedness_prompt = GROUNDEDNESS_PROMPT.format(context=context, answer=answer)
     assert context in groundedness_prompt
@@ -57,7 +56,7 @@ def test_score_parser():
     assert parse_judge_score("Explanation of RAG. SCORE: 0.95") == 0.95
     assert parse_judge_score("SCORE:1.0 is the grade.") == 1.0
     assert parse_judge_score("The score is SCORE: 0.40") == 0.4
-    
+
     # Test fallback
     assert parse_judge_score("No score found here.") == 0.0
 
@@ -65,13 +64,13 @@ def test_mock_rag_quality_judge():
     # Simulated judge outputs
     mock_precision_reply = "The retrieved context contains all constraints. SCORE: 1.0"
     mock_groundedness_reply = "The answer directly matches the 10MB limit. SCORE: 1.0"
-    
+
     precision_score = parse_judge_score(mock_precision_reply)
     groundedness_score = parse_judge_score(mock_groundedness_reply)
-    
+
     assert precision_score == 1.0
     assert groundedness_score == 1.0
-    
+
     # Check that average quality is excellent
     avg_quality = (precision_score + groundedness_score) / 2.0
     assert avg_quality >= 0.8

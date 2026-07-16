@@ -10,30 +10,36 @@ from __future__ import annotations
 import asyncio  # Required for asyncio.get_event_loop() and asyncio.gather() calls
 import json
 import uuid
-import structlog
+from collections.abc import AsyncGenerator, Sequence
 from datetime import datetime
-from typing import AsyncGenerator, Sequence  # Used as return type on SSE generator and query functions
+
+import structlog
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select, text
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user, get_rls_db
-from app.core.exceptions import SessionNotFoundException, ForbiddenException
-from app.models.query import QuerySession, Message, MessageRole, Citation
-from app.models.document import LeafChunk, ParentChunk
-from app.models.user import User
-from app.schemas.query import QueryRequest, CreateSessionRequest, QuerySessionResponse, MessageResponse
-from app.services.query_rewriter import QueryRewriter
-from app.services.embedding_service import EmbeddingService
-from app.services.retrieval_service import RetrievalService
-from app.services.reranker_service import RerankerService
-from app.services.context_builder import build_context
-from app.services.llm_service import LLMService
+from app.core.exceptions import ForbiddenException, SessionNotFoundException
 from app.db.session import AsyncSessionLocal
+from app.models.document import LeafChunk, ParentChunk
+from app.models.query import Citation, Message, MessageRole, QuerySession
+from app.models.user import User
+from app.schemas.query import (
+    CreateSessionRequest,
+    MessageResponse,
+    QueryRequest,
+    QuerySessionResponse,
+)
 from app.services.chunking_service import token_len
 from app.services.citation_service import CitationService
+from app.services.context_builder import build_context
+from app.services.embedding_service import EmbeddingService
+from app.services.llm_service import LLMService
+from app.services.query_rewriter import QueryRewriter
+from app.services.reranker_service import RerankerService
+from app.services.retrieval_service import RetrievalService
 from app.services.usage_service import UsageService
 
 logger = structlog.get_logger()
@@ -111,6 +117,7 @@ async def ask_question(
 
     # Redis Query Cache Check
     import hashlib
+
     from app.core.redis_client import redis_client
 
     cache_hash = hashlib.sha256(rewritten_query.encode("utf-8")).hexdigest()
@@ -245,7 +252,7 @@ async def ask_question(
                 async with AsyncSessionLocal() as db_write:
                     # Enforce RLS setting in background completion thread
                     await db_write.execute(text(f"SET LOCAL app.workspace_id = '{body.workspace_id}'"))
-                    
+
                     assistant_msg = Message(
                         session_id=session_id,
                         workspace_id=body.workspace_id,
@@ -255,7 +262,7 @@ async def ask_question(
                     )
                     db_write.add(assistant_msg)
                     await db_write.flush()  # Populate assistant_msg.id
-                    
+
                     # Extract and save citations
                     citation_service = CitationService()
                     citations_data = citation_service.extract_citations(
@@ -268,7 +275,7 @@ async def ask_question(
                             message_id=assistant_msg.id,
                             citations_data=citations_data
                         )
-                    
+
                     # Record query usage
                     usage_service_write = UsageService(db_write)
                     total_tokens = token_len(body.question) + token_len(full_reply)
@@ -276,7 +283,7 @@ async def ask_question(
                         user_id=current_user.id,
                         tokens_used=total_tokens,
                     )
-                    
+
                     await db_write.commit()
 
                     # Save result to Redis query cache namespace
@@ -300,14 +307,14 @@ async def ask_question(
                         )
                     except Exception as cache_exc:
                         logger.error("failed_to_write_redis_cache", error=str(cache_exc))
-                    
+
                     logger.info(
                         "assistant_reply_persisted",
                         session_id=str(session_id),
                         len_chars=len(full_reply),
                         citations_count=len(citations_data),
                     )
-                    
+
         except Exception as exc:
             logger.error("sse_stream_generation_failed", error=str(exc), exc_info=True)
             yield f"data: {json.dumps({'error': 'Failed to complete generation. AI provider error.'})}\n\n"

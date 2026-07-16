@@ -7,6 +7,7 @@ Enforces a 3-retry configuration on timeout errors.
 from __future__ import annotations
 
 import asyncio
+
 import httpx
 import structlog
 
@@ -34,7 +35,7 @@ class SummaryService:
             "Focus only on key facts, numbers, and dates. Do not include introductory text.\n\n"
             f"Content:\n{text}"
         )
-        
+
         async with httpx.AsyncClient(
             base_url=settings.OLLAMA_BASE_URL,
             timeout=httpx.Timeout(connect=5.0, read=300.0, write=15.0, pool=10.0)
@@ -51,7 +52,7 @@ class SummaryService:
                     if response.status_code != 200:
                         raise LLMProviderException(f"Ollama returned status {response.status_code}")
                     return str(response.json().get("response", "")).strip()
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.warning("ollama_summary_timeout", attempt=attempt)
                     if attempt == 3:
                         raise LLMProviderException("Ollama summarization timed out after 3 attempts.")
@@ -66,7 +67,7 @@ class SummaryService:
             "Summarize the following document section in 2-3 concise sentences. "
             "Focus only on key facts, numbers, and dates. Do not include introductory text."
         )
-        
+
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(connect=5.0, read=60.0, write=15.0, pool=10.0)
         ) as client:
@@ -90,7 +91,7 @@ class SummaryService:
                     if response.status_code != 200:
                         raise LLMProviderException(f"OpenAI returned status {response.status_code}")
                     return str(response.json()["choices"][0]["message"]["content"]).strip()
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.warning("openai_summary_timeout", attempt=attempt)
                     if attempt == 3:
                         raise LLMProviderException("OpenAI summarization timed out after 3 attempts.")

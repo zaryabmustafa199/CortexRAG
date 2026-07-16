@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import io
 from collections.abc import Generator
-import fitz  # PyMuPDF
+
 import docx  # python-docx
+import fitz  # PyMuPDF
 import structlog
 
 from app.core.exceptions import FileParsingException
@@ -34,7 +35,7 @@ def extract_text_streaming(
                 # Basic check for empty or corrupted PDF
                 if len(doc) == 0:
                     raise FileParsingException("PDF file contains no pages or is corrupted.")
-                    
+
                 for page_num, page in enumerate(doc, start=1):
                     raw_text = page.get_text()
                     # Secure clean: encode to UTF-8 replacing invalid sequences and decode back
@@ -51,14 +52,14 @@ def extract_text_streaming(
             current_page = 1
             buffer = []
             para_count = 0
-            
+
             for para in doc.paragraphs:
                 text = para.text.strip()
                 if not text:
                     continue
                 buffer.append(text)
                 para_count += 1
-                
+
                 # Yield mock page every 5 non-empty paragraphs
                 if para_count >= 5:
                     clean_text = "\n".join(buffer).encode("utf-8", errors="replace").decode("utf-8")
@@ -66,7 +67,7 @@ def extract_text_streaming(
                     buffer = []
                     para_count = 0
                     current_page += 1
-            
+
             if buffer:
                 clean_text = "\n".join(buffer).encode("utf-8", errors="replace").decode("utf-8")
                 yield {"page": current_page, "text": clean_text}
@@ -75,7 +76,7 @@ def extract_text_streaming(
             # Text / Markdown file: treat as a single page
             text = file_bytes.decode("utf-8", errors="replace")
             yield {"page": 1, "text": text}
-            
+
         else:
             raise FileParsingException(f"Unsupported MIME type for text extraction: {mime_type}")
 

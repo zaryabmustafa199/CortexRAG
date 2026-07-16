@@ -8,7 +8,7 @@ Add each new model import below under "Model imports".
 """
 from __future__ import annotations
 
-from sqlalchemy.orm import DeclarativeBase, MappedColumn
+from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):

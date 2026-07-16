@@ -6,6 +6,7 @@ API endpoints for retrieving user usage records and quotas.
 from __future__ import annotations
 
 import datetime
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 

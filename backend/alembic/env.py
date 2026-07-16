@@ -11,21 +11,27 @@ from __future__ import annotations
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
+
+from alembic import context
 
 # Import settings to get the DATABASE_URL
 from app.core.config import settings
 
 # Import Base so Alembic can discover all models for autogenerate
 from app.db.base import Base  # noqa: F401
+from app.models.document import (  # noqa: F401
+    ChunkEmbedding,
+    Document,
+    LeafChunk,
+    ParentChunk,
+    UploadJob,
+)
+from app.models.query import Citation, FeedbackRecord, Message, QuerySession  # noqa: F401
 
 # Import all models to register them on Base.metadata
-from app.models.user import User, Profile, APIKey, UsageRecord  # noqa: F401
-from app.models.workspace import Workspace, WorkspaceMember      # noqa: F401
-from app.models.document import Document, UploadJob, ParentChunk, LeafChunk, ChunkEmbedding  # noqa: F401
-from app.models.query import QuerySession, Message, Citation, FeedbackRecord  # noqa: F401
-
+from app.models.user import APIKey, Profile, UsageRecord, User  # noqa: F401
+from app.models.workspace import Workspace, WorkspaceMember  # noqa: F401
 
 # ── Alembic config ────────────────────────────────────────────────────────────
 config = context.config

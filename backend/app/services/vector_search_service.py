@@ -6,15 +6,16 @@ Enforces Row-Level Security (RLS) by setting the workspace_id in the database tr
 """
 from __future__ import annotations
 
-import uuid
 import asyncio
+import uuid
 from typing import Any
+
 import structlog
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import SearchServiceException
-from app.models.document import LeafChunk, ChunkEmbedding
+from app.models.document import ChunkEmbedding, LeafChunk
 
 logger = structlog.get_logger()
 
@@ -76,7 +77,7 @@ class VectorSearchService:
             )
             return results
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("vector_search_timeout", workspace_id=str(workspace_id))
             raise SearchServiceException("Semantic vector search timed out.")
         except Exception as exc:

@@ -20,9 +20,9 @@ from app.core.config import settings
 from app.core.exceptions import (
     ConflictException,
     ForbiddenException,
+    QuotaExceededException,
     UserNotFoundException,
     WorkspaceNotFoundException,
-    QuotaExceededException,
 )
 from app.core.security import hash_password, verify_password
 from app.models.user import Profile, User
@@ -129,7 +129,8 @@ class WorkspaceService:
         Enforces workspace count limit based on tier.
         """
         # Count existing workspaces owned by user
-        from sqlalchemy import func, select as sa_select
+        from sqlalchemy import func
+        from sqlalchemy import select as sa_select
         count_result = await self.db.execute(
             sa_select(func.count()).select_from(Workspace).where(
                 Workspace.owner_id == owner_id

@@ -8,8 +8,10 @@ Batches text embedding requests and enforces strict timeouts.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Generator
+from typing import Any, cast
+
 import httpx
-from typing import Any, Generator, cast
 import structlog
 
 from app.core.config import settings
@@ -51,7 +53,7 @@ class EmbeddingService:
         """
         results: list[list[float]] = []
         limits = httpx.Limits(max_keepalive_connections=10, max_connections=30)
-        
+
         async with httpx.AsyncClient(
             base_url=settings.OLLAMA_BASE_URL,
             timeout=httpx.Timeout(connect=5.0, read=300.0, write=30.0, pool=10.0),
@@ -83,9 +85,9 @@ class EmbeddingService:
             )
             if response.status_code != 200:
                 raise EmbeddingException(f"Ollama returned status {response.status_code}: {response.text}")
-            
+
             return cast(list[float], response.json()["embedding"])
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise EmbeddingException("Ollama embedding request timed out.")
         except Exception as exc:
             if isinstance(exc, EmbeddingException):
@@ -98,7 +100,7 @@ class EmbeddingService:
         Sends batched inputs in single requests for performance and cost.
         """
         results = []
-        
+
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(connect=5.0, read=120.0, write=30.0, pool=10.0)
         ) as client:
@@ -113,20 +115,20 @@ class EmbeddingService:
                         ),
                         timeout=30.0
                     )
-                    
+
                     if response.status_code != 200:
                         raise EmbeddingException(f"OpenAI returned status {response.status_code}: {response.text}")
-                    
+
                     data = response.json()["data"]
                     # Sort by index to preserve order
                     data_sorted = sorted(data, key=lambda x: x["index"])
                     results.extend([item["embedding"] for item in data_sorted])
-                    
-                except asyncio.TimeoutError:
+
+                except TimeoutError:
                     raise EmbeddingException("OpenAI embedding request timed out.")
                 except Exception as exc:
                     if isinstance(exc, EmbeddingException):
                         raise exc
                     raise EmbeddingException(f"OpenAI connection error: {str(exc)}")
-                    
+
         return results

@@ -6,17 +6,18 @@ Merges and ranks results using Reciprocal Rank Fusion (RRF).
 """
 from __future__ import annotations
 
-import uuid
 import asyncio
+import uuid
 from typing import Any, cast
+
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.document import LeafChunk
-from app.services.vector_search_service import VectorSearchService
 from app.services.bm25_service import bm25_search
+from app.services.vector_search_service import VectorSearchService
 
 logger = structlog.get_logger()
 

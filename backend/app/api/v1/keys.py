@@ -6,6 +6,7 @@ API key management endpoints.
 from __future__ import annotations
 
 import uuid
+
 from fastapi import APIRouter, Depends
 
 from app.core.deps import get_current_user
@@ -31,7 +32,7 @@ async def create_api_key(
     async with AsyncSessionLocal() as db:
         service = KeyService(db)
         api_key, raw_key = await service.create_key(current_user.id, body.name)
-        
+
         return APIKeyCreatedResponse(
             id=api_key.id,
             name=api_key.name,

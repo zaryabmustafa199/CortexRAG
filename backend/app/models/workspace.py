@@ -47,13 +47,13 @@ class Workspace(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    members: Mapped[list["WorkspaceMember"]] = relationship(
+    members: Mapped[list[WorkspaceMember]] = relationship(
         "WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan"
     )
-    documents: Mapped[list["Document"]] = relationship(  # type: ignore[name-defined]
+    documents: Mapped[list[Document]] = relationship(  # type: ignore[name-defined]
         "Document", back_populates="workspace", cascade="all, delete-orphan"
     )
-    query_sessions: Mapped[list["QuerySession"]] = relationship(  # type: ignore[name-defined]
+    query_sessions: Mapped[list[QuerySession]] = relationship(  # type: ignore[name-defined]
         "QuerySession", back_populates="workspace", cascade="all, delete-orphan"
     )
 
@@ -84,8 +84,8 @@ class WorkspaceMember(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="members")
-    user: Mapped["User"] = relationship("User", back_populates="workspace_memberships")  # type: ignore[name-defined]
+    workspace: Mapped[Workspace] = relationship("Workspace", back_populates="members")
+    user: Mapped[User] = relationship("User", back_populates="workspace_memberships")  # type: ignore[name-defined]
 
     def __repr__(self) -> str:
         return f"<WorkspaceMember ws={self.workspace_id} user={self.user_id} role={self.role}>"

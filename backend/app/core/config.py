@@ -104,7 +104,7 @@ class Settings(BaseSettings):
         return v
 
     @model_validator(mode="after")
-    def openai_key_required_if_provider_openai(self) -> "Settings":
+    def openai_key_required_if_provider_openai(self) -> Settings:
         """When LLM_PROVIDER=openai the API key must be present."""
         if self.LLM_PROVIDER == "openai" and not self.OPENAI_API_KEY:
             print(

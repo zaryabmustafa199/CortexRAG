@@ -11,27 +11,26 @@ Key dependencies:
 """
 from __future__ import annotations
 
-import uuid
 import hashlib
-from typing import AsyncGenerator
+import uuid
+from collections.abc import AsyncGenerator
 
-from fastapi import Depends, Header, Security, Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select, func
+from fastapi import Depends, Request
+from fastapi.security import HTTPBearer
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.exceptions import (
     AuthenticationException,
     ForbiddenException,
     UserNotFoundException,
     WorkspaceNotFoundException,
 )
+from app.core.rate_limiter import check_rate_limit
 from app.core.redis_client import redis_client
 from app.core.security import decode_access_token
-from app.core.rate_limiter import check_rate_limit
 from app.db.session import AsyncSessionLocal
-from app.models.user import User, Profile, APIKey
+from app.models.user import APIKey, Profile, User
 from app.models.workspace import Workspace, WorkspaceMember
 
 # ---------------------------------------------------------------------------

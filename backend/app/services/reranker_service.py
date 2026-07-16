@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
+
 import httpx
 import structlog
 
@@ -81,7 +82,7 @@ class RerankerService:
             logger.info("rerank_success", input_count=len(results), output_count=top_k)
             return final[:top_k]
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("reranker_timeout_fallback", msg="Rerank timed out. Falling back to RRF order.")
             return results[:top_k]
         except Exception as exc:
@@ -125,7 +126,7 @@ class RerankerService:
             else:
                 score = 0.5  # neutral score on API error
 
-        except (asyncio.TimeoutError, Exception):
+        except (TimeoutError, Exception):
             score = 0.5  # neutral score on timeout/error
 
         new_item = dict(item)

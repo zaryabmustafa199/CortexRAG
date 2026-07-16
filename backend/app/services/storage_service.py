@@ -6,11 +6,12 @@ Runs synchronous MinIO operations in a thread pool to avoid blocking the FastAPI
 """
 from __future__ import annotations
 
+import asyncio
 import io
 import uuid
-import asyncio
-import structlog
 from datetime import timedelta
+
+import structlog
 from minio import Minio
 
 from app.core.config import settings
@@ -66,7 +67,7 @@ async def store_file(workspace_id: str, content: bytes, suffix: str) -> str:
         )
         logger.info("minio_file_stored", workspace_id=workspace_id, storage_key=storage_key, size_bytes=len(content))
         return storage_key
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.error("minio_upload_timeout", workspace_id=workspace_id, storage_key=storage_key)
         raise StorageException("File storage upload timed out.")
     except Exception as exc:
@@ -95,7 +96,7 @@ async def get_file(storage_key: str) -> bytes:
             timeout=30.0
         )
         return bytes(content)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.error("minio_download_timeout", storage_key=storage_key)
         raise StorageException("File storage download timed out.")
     except Exception as exc:

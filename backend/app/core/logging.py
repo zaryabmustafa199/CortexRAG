@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Any, Union, cast
+from typing import Any, cast
 
 import structlog
 from structlog.types import EventDict, WrappedLogger
@@ -60,7 +60,7 @@ def configure_logging(json_logs: bool = True, log_level: str = "INFO") -> None:
         structlog.processors.StackInfoRenderer(),
     ]
 
-    renderer: Union[structlog.processors.JSONRenderer, structlog.dev.ConsoleRenderer]
+    renderer: structlog.processors.JSONRenderer | structlog.dev.ConsoleRenderer
     if json_logs:
         renderer = structlog.processors.JSONRenderer()
     else:

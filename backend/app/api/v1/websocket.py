@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-import structlog
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
-from sqlalchemy import select
+
 import redis.asyncio as aioredis
+import structlog
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.security import decode_access_token

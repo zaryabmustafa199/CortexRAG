@@ -1,9 +1,17 @@
-import pytest
 import uuid
+
+import pytest
 from pydantic import ValidationError
-from app.schemas.user import ChangePasswordRequest
-from app.core.security import hash_password, verify_password, create_access_token, decode_access_token
+
 from app.core.exceptions import AuthenticationException
+from app.core.security import (
+    create_access_token,
+    decode_access_token,
+    hash_password,
+    verify_password,
+)
+from app.schemas.user import ChangePasswordRequest
+
 
 def test_password_hashing():
     password = "SuperSecretPassword123!"
@@ -34,7 +42,7 @@ def test_password_complexity_validation():
 def test_jwt_token_flow():
     subject = str(uuid.uuid4())
     token = create_access_token(subject=subject, extra_claims={"role": "admin"})
-    
+
     decoded = decode_access_token(token)
     assert decoded["sub"] == subject
     assert decoded["role"] == "admin"

@@ -13,11 +13,11 @@ from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user
 from app.db.session import AsyncSessionLocal
-from app.models.user import Profile, User
+from app.models.user import User
 from app.models.workspace import (
+    MemberRole,  # Required for role comparison in update_workspace; was previously missing
     Workspace,
     WorkspaceMember,
-    MemberRole,  # Required for role comparison in update_workspace; was previously missing
 )
 from app.schemas.auth import MessageResponse
 from app.schemas.user import (
@@ -127,6 +127,7 @@ async def create_workspace(
     async with AsyncSessionLocal() as db:
         # Get profile for limit check
         from sqlalchemy import select as sa_select
+
         from app.models.user import Profile
         profile_result = await db.execute(
             sa_select(Profile).where(Profile.user_id == current_user.id)
