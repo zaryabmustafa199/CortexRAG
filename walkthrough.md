@@ -153,3 +153,15 @@ Based on the provided documents, 2 defects were found in the Authentication Modu
 
 [OK] Stream complete!
 ```
+
+---
+
+## 5. Frontend & UI Resiliency Bug Fixes
+
+To solidify the user experience under high concurrency and long-lived sessions, we resolved three critical frontend bugs:
+1. **Hydration Mismatch Suppressed**: Added `suppressHydrationWarning` to the root `<html>` element in [layout.tsx](file:///d:/Projects/PORTFOLIO/CORTEXRAG/frontend/app/layout.tsx) to prevent Grammarly or other browser extensions from throwing hydration warnings in the browser.
+2. **Axios & React Auth State Synchronization**:
+   * Out-of-sync auth states formerly caused silent token refresh collisions. When the Axios interceptor rotated the refresh token, the React `AuthProvider` state remained unaware, causing a subsequent reuse of the old refresh token (leading to a sudden redirect to `/login`).
+   * Established an event listener pattern: the Axios response interceptor in [api.ts](file:///d:/Projects/PORTFOLIO/CORTEXRAG/frontend/lib/api.ts) dispatches an event (`auth-token-refreshed`) upon rotation, which [AuthContext.tsx](file:///d:/Projects/PORTFOLIO/CORTEXRAG/frontend/context/AuthContext.tsx) listens to and uses to synchronize React state immediately.
+3. **Dynamic Streaming Citation State**:
+   * Updated the message header in [page.tsx](file:///d:/Projects/PORTFOLIO/CORTEXRAG/frontend/app/dashboard/chat/page.tsx) to render `"Analyzing context..."` during generation if citations are still empty, rather than displaying a misleading `"0 sources cited"` loading indicator.
