@@ -32,18 +32,22 @@ class EmbeddingService:
         """Return the name of the active embedding model."""
         if settings.LLM_PROVIDER == "openai":
             return settings.OPENAI_EMBED_MODEL
+        if settings.LLM_PROVIDER == "gemini":
+            return settings.GEMINI_EMBED_MODEL
         return settings.EMBED_MODEL
 
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
         """
         Generate embeddings for a list of texts.
-        Automatically routes to active provider (Ollama or OpenAI).
+        Automatically routes to active provider (Ollama, OpenAI, or Gemini).
         """
         if not texts:
             return []
 
         if settings.LLM_PROVIDER == "openai":
             return await self._openai_embed(texts)
+        if settings.LLM_PROVIDER == "gemini":
+            return await self._gemini_embed(texts)
         return await self._ollama_embed(texts)
 
     async def _ollama_embed(self, texts: list[str]) -> list[list[float]]:
@@ -130,5 +134,65 @@ class EmbeddingService:
                     if isinstance(exc, EmbeddingException):
                         raise exc
                     raise EmbeddingException(f"OpenAI connection error: {str(exc)}")
+
+        return results
+
+    async def _gemini_embed(self, texts: list[str]) -> list[list[float]]:
+        """
+        Generate embeddings using Google Gemini API.
+        Sends batched inputs in single requests using batchEmbedContents.
+        """
+        results = []
+        model_name = settings.GEMINI_EMBED_MODEL
+        if not model_name.startswith("models/"):
+            full_model_name = f"models/{model_name}"
+        else:
+            full_model_name = model_name
+            model_name = model_name.replace("models/", "")
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:batchEmbedContents?key={settings.GEMINI_API_KEY}"
+
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=5.0, read=120.0, write=30.0, pool=10.0)
+        ) as client:
+            # Batch inputs in groups of 32
+            for batch in chunks(texts, 32):
+                requests_payload = []
+                for text in batch:
+                    requests_payload.append({
+                        "model": full_model_name,
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": text
+                                }
+                            ]
+                        },
+                        "outputDimensionality": settings.GEMINI_EMBED_DIM
+                    })
+
+                try:
+                    response = await asyncio.wait_for(
+                        client.post(
+                            url,
+                            json={"requests": requests_payload}
+                        ),
+                        timeout=30.0
+                    )
+
+                    if response.status_code != 200:
+                        raise EmbeddingException(f"Gemini returned status {response.status_code}: {response.text}")
+
+                    data = response.json()
+                    embeddings = data.get("embeddings", [])
+                    for item in embeddings:
+                        results.append(item["values"])
+
+                except TimeoutError:
+                    raise EmbeddingException("Gemini embedding request timed out.")
+                except Exception as exc:
+                    if isinstance(exc, EmbeddingException):
+                        raise exc
+                    raise EmbeddingException(f"Gemini connection error: {str(exc)}")
 
         return results

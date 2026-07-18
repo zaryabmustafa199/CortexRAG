@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     ELASTICSEARCH_INDEX_CHUNKS: str = "cortexrag_chunks"
 
     # ── AI Provider ───────────────────────────────────────────────────────────
-    LLM_PROVIDER: Literal["ollama", "openai"] = "ollama"
+    LLM_PROVIDER: Literal["ollama", "openai", "gemini"] = "ollama"
     LLM_MODEL: str = "llama3"
     EMBED_MODEL: str = "nomic-embed-text"
     EMBED_DIM: int = 768
@@ -75,6 +75,12 @@ class Settings(BaseSettings):
     OPENAI_LLM_MODEL: str = "gpt-4o"
     OPENAI_EMBED_MODEL: str = "text-embedding-3-small"
     OPENAI_EMBED_DIM: int = 1536
+
+    # Gemini (only required when LLM_PROVIDER=gemini)
+    GEMINI_API_KEY: str = ""
+    GEMINI_LLM_MODEL: str = "gemini-3.5-flash"
+    GEMINI_EMBED_MODEL: str = "gemini-embedding-001"
+    GEMINI_EMBED_DIM: int = 768
 
     # ── File Upload Limits ─────────────────────────────────────────────────────
     MAX_UPLOAD_SIZE_MB_FREE: int = 10
@@ -115,6 +121,18 @@ class Settings(BaseSettings):
             sys.exit(1)
         return self
 
+    @model_validator(mode="after")
+    def gemini_key_required_if_provider_gemini(self) -> Settings:
+        """When LLM_PROVIDER=gemini the API key must be present."""
+        if self.LLM_PROVIDER == "gemini" and not self.GEMINI_API_KEY:
+            print(
+                "\n[FATAL] LLM_PROVIDER is 'gemini' but GEMINI_API_KEY is empty.\n"
+                "Either set GEMINI_API_KEY or switch LLM_PROVIDER.\n",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        return self
+
     # ── Derived helpers ───────────────────────────────────────────────────────
 
     @property
@@ -126,6 +144,8 @@ class Settings(BaseSettings):
         """Return the embedding dimension for the active provider."""
         if self.LLM_PROVIDER == "openai":
             return self.OPENAI_EMBED_DIM
+        if self.LLM_PROVIDER == "gemini":
+            return self.GEMINI_EMBED_DIM
         return self.EMBED_DIM
 
 

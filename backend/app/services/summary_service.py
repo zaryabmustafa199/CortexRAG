@@ -27,6 +27,8 @@ class SummaryService:
 
         if settings.LLM_PROVIDER == "openai":
             return await self._openai_summary(text)
+        if settings.LLM_PROVIDER == "gemini":
+            return await self._gemini_summary(text)
         return await self._ollama_summary(text)
 
     async def _ollama_summary(self, text: str) -> str:
@@ -97,4 +99,59 @@ class SummaryService:
                     logger.warning("openai_summary_failed", attempt=attempt, error=str(exc))
                     if attempt == 3:
                         raise LLMProviderException(f"OpenAI summarization failed: {str(exc)}")
+        return ""
+
+    async def _gemini_summary(self, text: str) -> str:
+        prompt = (
+            "Summarize the following document section in 2-3 concise sentences. "
+            "Focus only on key facts, numbers, and dates. Do not include introductory text."
+        )
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_LLM_MODEL}:generateContent?key={settings.GEMINI_API_KEY}"
+
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": f"{prompt}\n\nContent:\n{text}"}
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.3,
+            }
+        }
+
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=5.0, read=60.0, write=15.0, pool=10.0)
+        ) as client:
+            for attempt in range(1, 4):
+                try:
+                    response = await asyncio.wait_for(
+                        client.post(url, json=payload),
+                        timeout=60.0
+                    )
+                    if response.status_code != 200:
+                        raise LLMProviderException(f"Gemini returned status {response.status_code}: {response.text}")
+
+                    data = response.json()
+                    candidates = data.get("candidates", [])
+                    if not candidates:
+                        raise LLMProviderException("Gemini returned empty candidates list.")
+
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if not parts:
+                        raise LLMProviderException("Gemini returned empty candidates parts.")
+
+                    return str(parts[0].get("text", "")).strip()
+
+                except TimeoutError:
+                    logger.warning("gemini_summary_timeout", attempt=attempt)
+                    if attempt == 3:
+                        raise LLMProviderException("Gemini summarization timed out after 3 attempts.")
+                except Exception as exc:
+                    logger.warning("gemini_summary_failed", attempt=attempt, error=str(exc))
+                    if attempt == 3:
+                        raise LLMProviderException(f"Gemini summarization failed: {str(exc)}")
         return ""

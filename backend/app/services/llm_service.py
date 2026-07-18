@@ -26,11 +26,14 @@ class LLMService:
         system_prompt: str | None = None,
     ) -> AsyncGenerator[str, None]:
         """
-        Stream tokens from the configured LLM provider (Ollama or OpenAI).
+        Stream tokens from the configured LLM provider (Ollama, OpenAI, or Gemini).
         Yields raw text tokens.
         """
         if settings.LLM_PROVIDER == "openai":
             async for token in self._stream_openai(prompt, system_prompt):
+                yield token
+        elif settings.LLM_PROVIDER == "gemini":
+            async for token in self._stream_gemini(prompt, system_prompt):
                 yield token
         else:
             async for token in self._stream_ollama(prompt, system_prompt):
@@ -149,3 +152,76 @@ class LLMService:
                 raise exc
             logger.error("openai_stream_failed", error=str(exc))
             raise LLMProviderException(f"OpenAI stream connection failed: {str(exc)}")
+
+    async def _stream_gemini(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+    ) -> AsyncGenerator[str, None]:
+        """Stream response from Google Gemini streamGenerateContent API."""
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_LLM_MODEL}:streamGenerateContent?alt=sse&key={settings.GEMINI_API_KEY}"
+
+        contents = [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
+
+        payload = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": 0.3,
+            }
+        }
+
+        if system_prompt:
+            payload["systemInstruction"] = {
+                "parts": [
+                    {"text": system_prompt}
+                ]
+            }
+
+        timeout = httpx.Timeout(connect=5.0, read=120.0, write=15.0, pool=10.0)
+
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                async with client.stream(
+                    "POST",
+                    url,
+                    json=payload,
+                ) as response:
+                    if response.status_code != 200:
+                        err_body = await response.aread()
+                        raise LLMProviderException(f"Gemini returned status {response.status_code}: {err_body.decode()}")
+
+                    async for line in response.aiter_lines():
+                        line = line.strip()
+                        if not line or not line.startswith("data: "):
+                            continue
+
+                        # Strip "data: " prefix
+                        data_str = line[6:]
+
+                        data = json.loads(data_str)
+                        candidates = data.get("candidates", [])
+                        if not candidates:
+                            continue
+
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if not parts:
+                            continue
+
+                        token = parts[0].get("text", "")
+                        if token:
+                            yield token
+        except TimeoutError as exc:
+            logger.error("gemini_stream_timeout")
+            raise LLMProviderException("Gemini response stream timed out.") from exc
+        except Exception as exc:
+            if isinstance(exc, LLMProviderException):
+                raise exc
+            logger.error("gemini_stream_failed", error=str(exc))
+            raise LLMProviderException(f"Gemini stream connection failed: {str(exc)}")

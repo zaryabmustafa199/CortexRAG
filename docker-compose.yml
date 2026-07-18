@@ -201,7 +201,8 @@ services:
     volumes:
       - ./backend:/app
     networks:
-      - worker   # isolated — no outbound internet; only reaches postgres/redis/minio/ollama
+      - worker   # isolated database/storage/cache access
+      - app      # outbound internet access for Gemini/OpenAI APIs
     depends_on:
       postgres:
         condition: service_healthy
