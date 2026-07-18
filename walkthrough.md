@@ -130,3 +130,26 @@ Docker Compose configurations verify and build clean images matching production 
 docker compose -f docker-compose.yml -f docker-compose.prod.yml config
 # Result: Configuration validated and successfully parsed.
 ```
+
+---
+
+## 4. Phase 7: Google Gemini API Integration (Cloud Provider Upgrade)
+
+CortexRAG now supports **Google Gemini API** as a cloud intelligence provider choice alongside Ollama and OpenAI. This handles:
+* **Asynchronous Ingestion Pipeline**: Parallel hierarchical chunk embeddings generated via the `gemini-embedding-001` model using the Google `batchEmbedContents` endpoint.
+* **Dimensional Vector Truncation**: Vectors are mapped to exactly `768` dimensions using `outputDimensionality: 768` (Matryoshka Representation learning), ensuring a perfect drop-in replacement for pgvector without database migrations.
+* **Token Streaming (SSE)**: Conversational RAG chat generation streamed token-by-token over standard SSE protocol utilizing the `streamGenerateContent?alt=sse` parameter.
+* **Low-Resource CPU Fallback**: Resolves the CPU bottlenecks of local model inference (llama3) by executing fast, production-grade cloud RAG pipelines in under 5 seconds.
+* **Worker Connectivity Bridge**: Attached the Celery worker container (`cortexrag_worker`) to the bridge `app` network to enable secure outbound internet routing for Gemini Cloud API endpoints.
+
+### Verification Results
+RAG Chat query execution with Google Gemini (`gemini-3.5-flash`):
+```
+[..] Querying: 'How many defects were found in the Authentication Module?'
+[..] Streaming answer...
+
+[OK] Session ID: 84775409-010c-4f56-9833-c75683fe1fd7
+Based on the provided documents, 2 defects were found in the Authentication Module [Source 1].
+
+[OK] Stream complete!
+```
