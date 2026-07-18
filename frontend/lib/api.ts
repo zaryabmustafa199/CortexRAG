@@ -51,9 +51,17 @@ api.interceptors.response.use(
       try {
         // Attempt silent refresh
         const refreshResponse = await api.post("/auth/refresh");
-        const { access_token } = refreshResponse.data;
+        const { access_token, expires_in } = refreshResponse.data;
         
         setInMemoryToken(access_token);
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("auth-token-refreshed", {
+              detail: { accessToken: access_token, expiresIn: expires_in }
+            })
+          );
+        }
         
         // Update the authorization header for the retried request
         originalRequest.headers["Authorization"] = `Bearer ${access_token}`;
@@ -61,6 +69,13 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // If refresh fails, clear token and reject
         setInMemoryToken(null);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("auth-token-refreshed", {
+              detail: { accessToken: null, expiresIn: null }
+            })
+          );
+        }
         return Promise.reject(error);
       }
     }

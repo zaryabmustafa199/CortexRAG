@@ -136,6 +136,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Listen to silent refresh updates from Axios interceptor
+  React.useEffect(() => {
+    const handleTokenRefreshed = (e: Event) => {
+      const { accessToken: newAccess, expiresIn: newExpires } = (e as CustomEvent).detail;
+      setAccessToken(newAccess);
+      setExpiresIn(newExpires);
+      if (newAccess === null) {
+        setUser(null);
+      }
+    };
+    window.addEventListener("auth-token-refreshed", handleTokenRefreshed);
+    return () => window.removeEventListener("auth-token-refreshed", handleTokenRefreshed);
+  }, []);
+
   // Initial mount: try silent refresh
   React.useEffect(() => {
     refreshSession();

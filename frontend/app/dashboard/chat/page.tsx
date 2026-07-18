@@ -662,7 +662,9 @@ export default function ChatPage() {
                         <div className="flex items-center justify-between border-b border-border/10 pb-1.5 mb-2 text-[10px] text-muted-foreground font-mono">
                           <span className="flex items-center">
                             <FileText className="h-3 w-3 mr-1 text-primary" />
-                            {msg.citations.length} sources cited
+                            {isGenerating && (!msg.citations || msg.citations.length === 0)
+                              ? "Analyzing context..."
+                              : `${msg.citations?.length || 0} sources cited`}
                           </span>
                           {renderConfidenceBadge(msg.citations)}
                         </div>
