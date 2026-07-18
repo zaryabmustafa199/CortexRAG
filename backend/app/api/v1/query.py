@@ -26,6 +26,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.document import LeafChunk, ParentChunk
 from app.models.query import Citation, Message, MessageRole, QuerySession
 from app.models.user import User
+from app.models.workspace import WorkspaceMember
 from app.schemas.query import (
     CreateSessionRequest,
     MessageResponse,
@@ -52,7 +53,6 @@ async def ask_question(
     request: Request,
     body: QueryRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_rls_db),
 ) -> StreamingResponse:
     """
     Submit a query to the RAG engine.
@@ -62,9 +62,24 @@ async def ask_question(
     correlation_id = getattr(request.state, "correlation_id", None)
     log = logger.bind(workspace_id=str(body.workspace_id), correlation_id=correlation_id)
 
-    # Check query quota
-    usage_service = UsageService(db)
-    await usage_service.check_query_quota(current_user.id)
+    # Validate workspace membership and set up RLS session manually
+    # (cannot use get_rls_db dependency because workspace_id is in the request body,
+    # not in the URL query string — using it as a dep would cause a 422 conflict)
+    async with AsyncSessionLocal() as db:
+        from sqlalchemy import text as sa_text
+        member_result = await db.execute(
+            select(WorkspaceMember).where(
+                WorkspaceMember.workspace_id == body.workspace_id,
+                WorkspaceMember.user_id == current_user.id,
+            )
+        )
+        if member_result.scalar_one_or_none() is None:
+            raise ForbiddenException("You do not have access to this workspace.")
+        await db.execute(sa_text(f"SET LOCAL app.workspace_id = '{body.workspace_id}'"))
+
+        # Check query quota
+        usage_service = UsageService(db)
+        await usage_service.check_query_quota(current_user.id)
 
     # 1. Resolve or Create QuerySession
     session_id = body.session_id

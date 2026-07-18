@@ -5,6 +5,9 @@ from sqlalchemy import select
 # Import all models to configure registries
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
+import app.models.workspace
+import app.models.document
+import app.models.query
 
 
 async def main():

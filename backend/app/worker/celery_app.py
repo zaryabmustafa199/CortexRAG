@@ -10,6 +10,10 @@ from celery import Celery
 from app.core.config import settings
 
 # Import all models to ensure SQLAlchemy registers them and avoids mapper failures
+from app.models.user import User, Profile, APIKey, UsageRecord
+from app.models.workspace import Workspace, WorkspaceMember
+from app.models.document import Document, UploadJob, ParentChunk, LeafChunk, ChunkEmbedding
+from app.models.query import QuerySession, Message, Citation, FeedbackRecord
 
 celery_app = Celery(
     "cortexrag",

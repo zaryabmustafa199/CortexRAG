@@ -38,28 +38,26 @@ class SummaryService:
 
         async with httpx.AsyncClient(
             base_url=settings.OLLAMA_BASE_URL,
-            timeout=httpx.Timeout(connect=5.0, read=300.0, write=15.0, pool=10.0)
+            timeout=httpx.Timeout(connect=5.0, read=30.0, write=15.0, pool=10.0)
         ) as client:
-            for attempt in range(1, 4):  # Retry up to 3 times
+            for attempt in range(1, 2):  # Single attempt — summary is optional, fail fast on CPU
                 try:
                     response = await asyncio.wait_for(
                          client.post(
                              "/api/generate",
                              json={"model": settings.LLM_MODEL, "prompt": prompt, "stream": False}
                          ),
-                         timeout=300.0
+                         timeout=30.0  # Fail fast on CPU-only; summary is optional
                     )
                     if response.status_code != 200:
                         raise LLMProviderException(f"Ollama returned status {response.status_code}")
                     return str(response.json().get("response", "")).strip()
                 except TimeoutError:
                     logger.warning("ollama_summary_timeout", attempt=attempt)
-                    if attempt == 3:
-                        raise LLMProviderException("Ollama summarization timed out after 3 attempts.")
+                    raise LLMProviderException("Ollama summarization timed out.")
                 except Exception as exc:
                     logger.warning("ollama_summary_failed", attempt=attempt, error=str(exc))
-                    if attempt == 3:
-                        raise LLMProviderException(f"Ollama summarization failed: {str(exc)}")
+                    raise LLMProviderException(f"Ollama summarization failed: {str(exc)}")
         return ""
 
     async def _openai_summary(self, text: str) -> str:
