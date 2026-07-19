@@ -11,17 +11,17 @@ os.environ["MINIO_ENDPOINT"] = "localhost:9010"
 os.environ["MINIO_ACCESS_KEY"] = "cortexrag_minio"
 os.environ["MINIO_SECRET_KEY"] = "cortexrag_minio_secret"
 
-import uuid
-from unittest.mock import AsyncMock, MagicMock
+import uuid  # noqa: E402
+from unittest.mock import AsyncMock, MagicMock  # noqa: E402
 
-import pytest
-from fastapi.testclient import TestClient
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
 
-from app.core.deps import get_current_user, get_rls_db
+from app.core.deps import get_current_user, get_rls_db  # noqa: E402
 
 # Preload Base to resolve circular import dependency during testing
-from app.main import create_app
-from app.models.user import User
+from app.main import create_app  # noqa: E402
+from app.models.user import User  # noqa: E402
 
 
 @pytest.fixture
