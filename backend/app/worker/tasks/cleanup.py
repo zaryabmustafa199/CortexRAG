@@ -4,6 +4,7 @@ app/worker/tasks/cleanup.py
 Celery background cleanup tasks (GDPR account purges).
 Deletes physical binaries from MinIO before purging user DB records.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -29,9 +30,7 @@ async def run_user_data_purge(user_id: str) -> None:
     await engine.dispose()
     async with AsyncSessionLocal() as db:
         # Fetch workspaces owned by the user
-        ws_result = await db.execute(
-            select(Workspace).where(Workspace.owner_id == user_uuid)
-        )
+        ws_result = await db.execute(select(Workspace).where(Workspace.owner_id == user_uuid))
         workspaces = ws_result.scalars().all()
         workspace_ids = [ws.id for ws in workspaces]
 
@@ -56,9 +55,7 @@ async def run_user_data_purge(user_id: str) -> None:
                     )
 
         # Fetch the user
-        user_result = await db.execute(
-            select(User).where(User.id == user_uuid)
-        )
+        user_result = await db.execute(select(User).where(User.id == user_uuid))
         user = user_result.scalar_one_or_none()
         if user:
             # Delete user (database cascade deletes workspaces, members, documents, chunks, and embeddings)

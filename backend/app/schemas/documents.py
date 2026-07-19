@@ -3,6 +3,7 @@ app/schemas/documents.py
 ------------------------
 Pydantic schemas for document and upload job endpoints.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -70,4 +71,3 @@ class ParentChunkSchema(BaseModel):
     leaf_chunks: list[LeafChunkSchema] = []
 
     model_config = {"from_attributes": True}
-

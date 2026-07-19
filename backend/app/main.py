@@ -11,6 +11,7 @@ Exception handlers:
   CortexException subclasses → structured JSON with correlation_id
   Unhandled Exception        → 500 + correlation_id (stack trace in logs only)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -74,20 +75,25 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         embed_dim=settings.active_embed_dim,
     )
     from app.services.storage_service import init_bucket
+
     init_bucket()
     from app.services.bm25_service import init_es_index
+
     await init_es_index()
 
     # Pre-warm Ollama model in the background (non-blocking)
     if settings.LLM_PROVIDER == "ollama":
+
         async def prewarm() -> None:
             try:
                 from app.services.embedding_service import EmbeddingService
+
                 embed_service = EmbeddingService()
                 await embed_service.embed_texts(["prewarm"])
                 logger.info("ollama_embeddings_prewarmed", model=settings.EMBED_MODEL)
             except Exception as exc:
                 logger.warning("ollama_prewarm_failed", error=str(exc))
+
         asyncio.create_task(prewarm())
 
     yield  # Application runs here
@@ -138,9 +144,7 @@ def create_app() -> FastAPI:
     # ── Exception Handlers ────────────────────────────────────────────────────
 
     @application.exception_handler(CortexException)
-    async def cortex_exception_handler(
-        request: Request, exc: CortexException
-    ) -> JSONResponse:
+    async def cortex_exception_handler(request: Request, exc: CortexException) -> JSONResponse:
         """
         Catches all CortexException subclasses.
         Returns structured JSON + logs with full context.
@@ -169,9 +173,7 @@ def create_app() -> FastAPI:
         )
 
     @application.exception_handler(Exception)
-    async def unhandled_exception_handler(
-        request: Request, exc: Exception
-    ) -> JSONResponse:
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         """
         Safety net for any exception not explicitly handled above.
         Logs full stack trace; returns generic 500 with correlation_id only.
@@ -265,10 +267,9 @@ def create_app() -> FastAPI:
                     "redis": "ok" if redis_ok else "failed",
                     "minio": "ok" if minio_ok else "failed",
                     "llm_provider": "ok" if ollama_ok else "failed",
-                }
-            }
+                },
+            },
         )
-
 
     @application.get("/admin/security-check", tags=["Admin"])
     async def security_audit() -> JSONResponse:
@@ -280,7 +281,10 @@ def create_app() -> FastAPI:
         from app.db.session import AsyncSessionLocal
 
         # 1. Audit JWT Secret
-        jwt_ok = len(settings.JWT_SECRET) >= 32 and settings.JWT_SECRET != "CHANGE_ME_generate_with_secrets_token_urlsafe_64"
+        jwt_ok = (
+            len(settings.JWT_SECRET) >= 32
+            and settings.JWT_SECRET != "CHANGE_ME_generate_with_secrets_token_urlsafe_64"
+        )
 
         # 2. Audit SSL/HTTPS settings
         ssl_ok = True
@@ -291,9 +295,9 @@ def create_app() -> FastAPI:
         rls_ok = False
         try:
             async with AsyncSessionLocal() as session:
-                result = await session.execute(text(
-                    "SELECT relrowsecurity FROM pg_class WHERE relname = 'documents'"
-                ))
+                result = await session.execute(
+                    text("SELECT relrowsecurity FROM pg_class WHERE relname = 'documents'")
+                )
                 row = result.scalar_one_or_none()
                 if row is True:
                     rls_ok = True
@@ -306,7 +310,9 @@ def create_app() -> FastAPI:
         # 5. API Documentation Exposure Check
         docs_exposed = not settings.is_production
 
-        overall_secure = jwt_ok and rls_ok and (not settings.is_production or (ssl_ok and sentry_ok))
+        overall_secure = (
+            jwt_ok and rls_ok and (not settings.is_production or (ssl_ok and sentry_ok))
+        )
 
         return JSONResponse(
             status_code=200,
@@ -318,12 +324,12 @@ def create_app() -> FastAPI:
                     "sentry_error_tracking": "configured" if sentry_ok else "disabled",
                     "api_documentation_exposed": "yes" if docs_exposed else "no",
                     "production_ssl_enforcement": "passed" if ssl_ok else "warning",
-                }
-            }
+                },
+            },
         )
 
-
     from app.api.v1.router import api_router
+
     application.include_router(api_router, prefix="/api/v1")
 
     return application

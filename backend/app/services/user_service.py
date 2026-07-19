@@ -8,6 +8,7 @@ Engineering rules:
   - Tier limits applied via TIER_LIMITS dict — single source of truth
   - Account deletion: soft-delete user (is_active=False), queue full purge via Celery
 """
+
 from __future__ import annotations
 
 import uuid
@@ -53,16 +54,12 @@ class UserService:
 
     async def get_user_with_profile(self, user_id: uuid.UUID) -> tuple[User, Profile]:
         """Fetch user + profile. Raises UserNotFoundException if either missing."""
-        user_result = await self.db.execute(
-            select(User).where(User.id == user_id)
-        )
+        user_result = await self.db.execute(select(User).where(User.id == user_id))
         user = user_result.scalar_one_or_none()
         if user is None:
             raise UserNotFoundException()
 
-        profile_result = await self.db.execute(
-            select(Profile).where(Profile.user_id == user_id)
-        )
+        profile_result = await self.db.execute(select(Profile).where(Profile.user_id == user_id))
         profile = profile_result.scalar_one_or_none()
         if profile is None:
             raise UserNotFoundException("User profile not found.")
@@ -114,6 +111,7 @@ class UserService:
 
         # Enqueue Celery task to purge all user data (GDPR compliant)
         from app.worker.tasks.cleanup import cleanup_user_data
+
         cleanup_user_data.delay(str(user_id))
 
 
@@ -121,9 +119,7 @@ class WorkspaceService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def create_workspace(
-        self, owner_id: uuid.UUID, name: str, profile: Profile
-    ) -> Workspace:
+    async def create_workspace(self, owner_id: uuid.UUID, name: str, profile: Profile) -> Workspace:
         """
         Create a new workspace for the user.
         Enforces workspace count limit based on tier.
@@ -131,10 +127,9 @@ class WorkspaceService:
         # Count existing workspaces owned by user
         from sqlalchemy import func
         from sqlalchemy import select as sa_select
+
         count_result = await self.db.execute(
-            sa_select(func.count()).select_from(Workspace).where(
-                Workspace.owner_id == owner_id
-            )
+            sa_select(func.count()).select_from(Workspace).where(Workspace.owner_id == owner_id)
         )
         owned_count = count_result.scalar() or 0
         ws_limit = TIER_LIMITS.get(profile.tier, TIER_LIMITS["free"])["workspace_limit"]
@@ -161,13 +156,9 @@ class WorkspaceService:
         logger.info("workspace_created", workspace_id=str(workspace.id), owner=str(owner_id))
         return workspace
 
-    async def get_workspace(
-        self, workspace_id: uuid.UUID, user_id: uuid.UUID
-    ) -> Workspace:
+    async def get_workspace(self, workspace_id: uuid.UUID, user_id: uuid.UUID) -> Workspace:
         """Fetch workspace — validates user is a member."""
-        ws_result = await self.db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
-        )
+        ws_result = await self.db.execute(select(Workspace).where(Workspace.id == workspace_id))
         workspace = ws_result.scalar_one_or_none()
         if workspace is None:
             raise WorkspaceNotFoundException()
@@ -216,9 +207,7 @@ class WorkspaceService:
             raise ConflictException("User is already a member of this workspace.")
 
         # Verify invitee user exists
-        invitee_result = await self.db.execute(
-            select(User).where(User.id == invitee_id)
-        )
+        invitee_result = await self.db.execute(select(User).where(User.id == invitee_id))
         if invitee_result.scalar_one_or_none() is None:
             raise UserNotFoundException("Invited user not found.")
 
@@ -230,7 +219,9 @@ class WorkspaceService:
         self.db.add(member)
         await self.db.commit()
         await self.db.refresh(member)
-        logger.info("member_added", workspace_id=str(workspace_id), user_id=str(invitee_id), role=role)
+        logger.info(
+            "member_added", workspace_id=str(workspace_id), user_id=str(invitee_id), role=role
+        )
         return member
 
     async def remove_member(
@@ -243,9 +234,7 @@ class WorkspaceService:
         Remove a member from workspace. Remover must be ADMIN.
         Cannot remove the workspace owner.
         """
-        ws_result = await self.db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
-        )
+        ws_result = await self.db.execute(select(Workspace).where(Workspace.id == workspace_id))
         workspace = ws_result.scalar_one_or_none()
         if workspace is None:
             raise WorkspaceNotFoundException()

@@ -10,6 +10,7 @@ RLS Note:
     dimension from settings.active_embed_dim.
   - model_name column allows multi-model support without hardcoding dimensions.
 """
+
 from __future__ import annotations
 
 import enum
@@ -47,9 +48,7 @@ class DocumentStatus(str, enum.Enum):
 class Document(Base):
     __tablename__ = "documents"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("workspaces.id", ondelete="CASCADE"),
@@ -59,7 +58,9 @@ class Document(Base):
     filename: Mapped[str] = mapped_column(String(500), nullable=False)
     storage_key: Mapped[str] = mapped_column(String(1000), nullable=False)  # MinIO object key
     status: Mapped[DocumentStatus] = mapped_column(
-        Enum(DocumentStatus, name="document_status", values_callable=lambda x: [e.value for e in x]),
+        Enum(
+            DocumentStatus, name="document_status", values_callable=lambda x: [e.value for e in x]
+        ),
         default=DocumentStatus.PENDING,
         nullable=False,
         index=True,
@@ -94,9 +95,7 @@ class Document(Base):
 class UploadJob(Base):
     __tablename__ = "upload_jobs"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     document_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("documents.id", ondelete="CASCADE"),
@@ -127,9 +126,7 @@ class UploadJob(Base):
 class ParentChunk(Base):
     __tablename__ = "parent_chunks"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     document_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("documents.id", ondelete="CASCADE"),
@@ -137,11 +134,15 @@ class ParentChunk(Base):
         index=True,
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True,
         # Denormalised for RLS — eliminates JOIN when checking workspace isolation
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    summary: Mapped[str | None] = mapped_column(Text, nullable=True)  # LLM-generated section summary
+    summary: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # LLM-generated section summary
     section_title: Mapped[str | None] = mapped_column(String(500), nullable=True)
     page_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
     page_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -163,9 +164,7 @@ class ParentChunk(Base):
 class LeafChunk(Base):
     __tablename__ = "leaf_chunks"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     parent_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("parent_chunks.id", ondelete="CASCADE"),
@@ -173,7 +172,9 @@ class LeafChunk(Base):
         index=True,
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True,
         # Denormalised for RLS
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
@@ -181,7 +182,9 @@ class LeafChunk(Base):
     token_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     section_title: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    years_detected: Mapped[list[int] | None] = mapped_column(JSONB, nullable=True)  # e.g. [2015, 2020]
+    years_detected: Mapped[list[int] | None] = mapped_column(
+        JSONB, nullable=True
+    )  # e.g. [2015, 2020]
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -199,9 +202,7 @@ class LeafChunk(Base):
 class ChunkEmbedding(Base):
     __tablename__ = "chunk_embeddings"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     chunk_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("leaf_chunks.id", ondelete="CASCADE"),
@@ -209,14 +210,14 @@ class ChunkEmbedding(Base):
         index=True,
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True,
         # Denormalised for RLS
     )
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     # Vector dimension is set from settings — allows model switching without schema rebuild
-    vector: Mapped[Any] = mapped_column(
-        Vector(settings.active_embed_dim), nullable=False
-    )
+    vector: Mapped[Any] = mapped_column(Vector(settings.active_embed_dim), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -227,9 +228,7 @@ class ChunkEmbedding(Base):
     # ── Table-level index (HNSW for vector cosine search) ─────────────────────
     # NOTE: The HNSW index cannot be expressed in SQLAlchemy mapped columns —
     # it is created manually in the Alembic migration using op.execute().
-    __table_args__ = (
-        Index("idx_chunk_embeddings_workspace_id", "workspace_id"),
-    )
+    __table_args__ = (Index("idx_chunk_embeddings_workspace_id", "workspace_id"),)
 
     def __repr__(self) -> str:
         return f"<ChunkEmbedding chunk={self.chunk_id} model={self.model_name!r}>"

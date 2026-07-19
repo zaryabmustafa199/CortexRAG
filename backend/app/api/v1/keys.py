@@ -3,6 +3,7 @@ app/api/v1/keys.py
 ------------------
 API key management endpoints.
 """
+
 from __future__ import annotations
 
 import uuid

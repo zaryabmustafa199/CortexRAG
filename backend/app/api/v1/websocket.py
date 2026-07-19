@@ -3,6 +3,7 @@ app/api/v1/websocket.py
 -----------------------
 WebSocket endpoints for real-time document ingestion notifications.
 """
+
 from __future__ import annotations
 
 import asyncio

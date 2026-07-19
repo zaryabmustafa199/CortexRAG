@@ -5,6 +5,7 @@ Main API v1 router — mounts all sub-routers.
 
 Add new routers here as each step is completed.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter
@@ -27,8 +28,3 @@ api_router.include_router(docs_router)
 api_router.include_router(query_router)
 api_router.include_router(usage_router)
 api_router.include_router(ws_notifications_router)
-
-
-
-
-

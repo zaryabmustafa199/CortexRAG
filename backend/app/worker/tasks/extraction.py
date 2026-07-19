@@ -4,6 +4,7 @@ app/worker/tasks/extraction.py
 Document text extraction logic for worker execution.
 Downloads from MinIO and invokes the parser service.
 """
+
 from __future__ import annotations
 
 import structlog

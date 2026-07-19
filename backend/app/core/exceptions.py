@@ -11,6 +11,7 @@ Usage:
     raise InvalidFileException("File content does not match extension.")
     raise LLMProviderException(details={"timeout": 30})
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -39,6 +40,7 @@ class CortexException(Exception):
 
 # ── Authentication & Authorisation ───────────────────────────────────────────
 
+
 class AuthenticationException(CortexException):
     code = "AUTH_FAILED"
     status_code = 401
@@ -58,6 +60,7 @@ class RateLimitException(CortexException):
 
 
 # ── Resource Not Found ────────────────────────────────────────────────────────
+
 
 class UserNotFoundException(CortexException):
     code = "USER_NOT_FOUND"
@@ -85,6 +88,7 @@ class SessionNotFoundException(CortexException):
 
 # ── Conflict ─────────────────────────────────────────────────────────────────
 
+
 class ConflictException(CortexException):
     code = "CONFLICT"
     status_code = 409
@@ -92,6 +96,7 @@ class ConflictException(CortexException):
 
 
 # ── Business Logic ────────────────────────────────────────────────────────────
+
 
 class QuotaExceededException(CortexException):
     code = "QUOTA_EXCEEDED"
@@ -113,6 +118,7 @@ class TokenRevokedException(CortexException):
 
 # ── File Upload & Parsing ─────────────────────────────────────────────────────
 
+
 class InvalidFileException(CortexException):
     code = "INVALID_FILE"
     status_code = 400
@@ -132,6 +138,7 @@ class FileTooLargeException(CortexException):
 
 
 # ── External Services ─────────────────────────────────────────────────────────
+
 
 class LLMProviderException(CortexException):
     code = "LLM_UNAVAILABLE"

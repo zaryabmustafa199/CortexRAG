@@ -4,6 +4,7 @@ app/services/bm25_service.py
 Elasticsearch BM25 keyword search service.
 Handles indexing, deletion, and keyword search operations.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -36,7 +37,7 @@ async def init_es_index() -> None:
                             "section_title": {"type": "text"},
                         }
                     }
-                }
+                },
             )
             logger.info("elasticsearch_index_created", index=index)
         else:
@@ -61,7 +62,7 @@ async def index_leaf_chunk(
                 "content": content,
                 "workspace_id": str(workspace_id),
                 "section_title": section_title or "",
-            }
+            },
         )
     except Exception as exc:
         # Fail open: log error but do not raise, keeping chunking worker alive
@@ -73,11 +74,7 @@ async def delete_indexed_chunks(workspace_id: uuid.UUID) -> None:
     try:
         await es_client.delete_by_query(
             index=settings.ELASTICSEARCH_INDEX_CHUNKS,
-            body={
-                "query": {
-                    "term": {"workspace_id": str(workspace_id)}
-                }
-            }
+            body={"query": {"term": {"workspace_id": str(workspace_id)}}},
         )
         logger.info("elasticsearch_chunks_deleted", workspace_id=str(workspace_id))
     except Exception as exc:
@@ -100,25 +97,23 @@ async def bm25_search(
                 "size": top_k,
                 "query": {
                     "bool": {
-                        "must": [
-                            {"match": {"content": query_text}}
-                        ],
-                        "filter": [
-                            {"term": {"workspace_id": str(workspace_id)}}
-                        ]
+                        "must": [{"match": {"content": query_text}}],
+                        "filter": [{"term": {"workspace_id": str(workspace_id)}}],
                     }
-                }
-            }
+                },
+            },
         )
 
         hits = response["hits"]["hits"]
         results = []
         for hit in hits:
             source = hit["_source"]
-            results.append({
-                "chunk_id": uuid.UUID(source["chunk_id"]),
-                "score": hit["_score"],
-            })
+            results.append(
+                {
+                    "chunk_id": uuid.UUID(source["chunk_id"]),
+                    "score": hit["_score"],
+                }
+            )
 
         logger.info("elasticsearch_search_success", query=query_text, results_count=len(results))
         return results

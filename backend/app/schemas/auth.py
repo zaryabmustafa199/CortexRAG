@@ -6,6 +6,7 @@ Pydantic v2 request/response schemas for authentication endpoints.
 All input schemas use strict validation — see §4.4 of implementation plan.
 Passwords are validated for minimum complexity here; hashing happens in the service.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -53,6 +54,7 @@ class UserResponse(BaseModel):
 
 class AuthResponse(BaseModel):
     """Returned on successful register or login."""
+
     user: UserResponse
     access_token: str
     token_type: str = "bearer"
@@ -67,4 +69,5 @@ class RefreshResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     """Generic success message response."""
+
     message: str

@@ -5,6 +5,7 @@ Embedding generation service.
 Supports Ollama (local) and OpenAI (cloud fallback) providers.
 Batches text embedding requests and enforces strict timeouts.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -82,13 +83,14 @@ class EmbeddingService:
         try:
             response = await asyncio.wait_for(
                 client.post(
-                    "/api/embeddings",
-                    json={"model": settings.EMBED_MODEL, "prompt": text}
+                    "/api/embeddings", json={"model": settings.EMBED_MODEL, "prompt": text}
                 ),
-                timeout=300.0
+                timeout=300.0,
             )
             if response.status_code != 200:
-                raise EmbeddingException(f"Ollama returned status {response.status_code}: {response.text}")
+                raise EmbeddingException(
+                    f"Ollama returned status {response.status_code}: {response.text}"
+                )
 
             return cast(list[float], response.json()["embedding"])
         except TimeoutError:
@@ -113,15 +115,17 @@ class EmbeddingService:
                 try:
                     response = await asyncio.wait_for(
                         client.post(
-                          "https://api.openai.com/v1/embeddings",
-                          headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}"},
-                          json={"model": settings.OPENAI_EMBED_MODEL, "input": batch}
+                            "https://api.openai.com/v1/embeddings",
+                            headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}"},
+                            json={"model": settings.OPENAI_EMBED_MODEL, "input": batch},
                         ),
-                        timeout=30.0
+                        timeout=30.0,
                     )
 
                     if response.status_code != 200:
-                        raise EmbeddingException(f"OpenAI returned status {response.status_code}: {response.text}")
+                        raise EmbeddingException(
+                            f"OpenAI returned status {response.status_code}: {response.text}"
+                        )
 
                     data = response.json()["data"]
                     # Sort by index to preserve order
@@ -159,29 +163,23 @@ class EmbeddingService:
             for batch in chunks(texts, 32):
                 requests_payload = []
                 for text in batch:
-                    requests_payload.append({
-                        "model": full_model_name,
-                        "content": {
-                            "parts": [
-                                {
-                                    "text": text
-                                }
-                            ]
-                        },
-                        "outputDimensionality": settings.GEMINI_EMBED_DIM
-                    })
+                    requests_payload.append(
+                        {
+                            "model": full_model_name,
+                            "content": {"parts": [{"text": text}]},
+                            "outputDimensionality": settings.GEMINI_EMBED_DIM,
+                        }
+                    )
 
                 try:
                     response = await asyncio.wait_for(
-                        client.post(
-                            url,
-                            json={"requests": requests_payload}
-                        ),
-                        timeout=30.0
+                        client.post(url, json={"requests": requests_payload}), timeout=30.0
                     )
 
                     if response.status_code != 200:
-                        raise EmbeddingException(f"Gemini returned status {response.status_code}: {response.text}")
+                        raise EmbeddingException(
+                            f"Gemini returned status {response.status_code}: {response.text}"
+                        )
 
                     data = response.json()
                     embeddings = data.get("embeddings", [])

@@ -6,6 +6,7 @@ QuerySession, Message, Citation, FeedbackRecord models.
 RLS: query_sessions and messages carry workspace_id for RLS enforcement.
 Citations link back to specific LeafChunks for transparency and deletion cascades.
 """
+
 from __future__ import annotations
 
 import enum
@@ -38,9 +39,7 @@ class MessageRole(str, enum.Enum):
 class QuerySession(Base):
     __tablename__ = "query_sessions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("workspaces.id", ondelete="CASCADE"),
@@ -67,8 +66,10 @@ class QuerySession(Base):
     # ── Relationships ─────────────────────────────────────────────────────────
     workspace: Mapped[Workspace] = relationship("Workspace", back_populates="query_sessions")  # type: ignore[name-defined]
     messages: Mapped[list[Message]] = relationship(
-        "Message", back_populates="session", cascade="all, delete-orphan",
-        order_by="Message.created_at"
+        "Message",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="Message.created_at",
     )
     feedback: Mapped[FeedbackRecord | None] = relationship(
         "FeedbackRecord", back_populates="session", uselist=False, cascade="all, delete-orphan"
@@ -81,9 +82,7 @@ class QuerySession(Base):
 class Message(Base):
     __tablename__ = "messages"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("query_sessions.id", ondelete="CASCADE"),
@@ -91,11 +90,14 @@ class Message(Base):
         index=True,
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, index=True
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True,
         # Denormalised for RLS
     )
     role: Mapped[MessageRole] = mapped_column(
-        Enum(MessageRole, name="message_role", values_callable=lambda x: [e.value for e in x]), nullable=False
+        Enum(MessageRole, name="message_role", values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     tokens_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -116,9 +118,7 @@ class Message(Base):
 class Citation(Base):
     __tablename__ = "citations"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     message_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("messages.id", ondelete="CASCADE"),
@@ -128,7 +128,7 @@ class Citation(Base):
     chunk_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("leaf_chunks.id", ondelete="SET NULL"),
-        nullable=True,   # SET NULL if chunk is deleted (document purged after citation)
+        nullable=True,  # SET NULL if chunk is deleted (document purged after citation)
         index=True,
     )
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -146,9 +146,7 @@ class Citation(Base):
 class FeedbackRecord(Base):
     __tablename__ = "feedback_records"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("query_sessions.id", ondelete="CASCADE"),

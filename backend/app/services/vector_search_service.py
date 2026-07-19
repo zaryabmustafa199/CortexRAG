@@ -4,6 +4,7 @@ app/services/vector_search_service.py
 Vector similarity search service using pgvector.
 Enforces Row-Level Security (RLS) by setting the workspace_id in the database transaction session.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -33,20 +34,21 @@ class VectorSearchService:
         """
         Perform a semantic similarity vector search over LeafChunks.
         Uses pgvector's cosine distance operator (<=>).
-        
+
         RLS is activated by setting local session variables.
         Returns a list of dicts: {"chunk": LeafChunk, "similarity": float}
         """
         # Set workspace context locally for pgvector RLS checks
-        await self.db.execute(
-            text(f"SET LOCAL app.workspace_id = '{workspace_id}'")
-        )
+        await self.db.execute(text(f"SET LOCAL app.workspace_id = '{workspace_id}'"))
 
         from sqlalchemy.orm import selectinload
+
         try:
             # Query LeafChunks joined with embeddings, ordered by cosine distance
             query = (
-                select(LeafChunk, (ChunkEmbedding.vector.cosine_distance(query_vec)).label("distance"))
+                select(
+                    LeafChunk, (ChunkEmbedding.vector.cosine_distance(query_vec)).label("distance")
+                )
                 .options(selectinload(LeafChunk.parent))
                 .join(ChunkEmbedding, LeafChunk.id == ChunkEmbedding.chunk_id)
                 .where(LeafChunk.workspace_id == workspace_id)
@@ -55,20 +57,19 @@ class VectorSearchService:
             )
 
             # Enforce 10-second query statement timeout
-            db_result = await asyncio.wait_for(
-                self.db.execute(query),
-                timeout=10.0
-            )
+            db_result = await asyncio.wait_for(self.db.execute(query), timeout=10.0)
             rows = db_result.all()
 
             results = []
             for leaf_chunk, distance in rows:
                 # Cosine Similarity = 1 - Cosine Distance
                 similarity = 1.0 - float(distance) if distance is not None else 0.0
-                results.append({
-                    "chunk": leaf_chunk,
-                    "similarity": similarity,
-                })
+                results.append(
+                    {
+                        "chunk": leaf_chunk,
+                        "similarity": similarity,
+                    }
+                )
 
             logger.info(
                 "vector_search_success",

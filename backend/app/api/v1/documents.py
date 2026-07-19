@@ -3,6 +3,7 @@ app/api/v1/documents.py
 -----------------------
 API endpoints for document uploads and secure presigned URL retrieval.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -45,9 +46,7 @@ async def upload_document(
     Runs validation, stores the file in secure storage, and schedules async ingestion.
     """
     # Fetch user profile for limit enforcement
-    profile_result = await db.execute(
-        select(Profile).where(Profile.user_id == current_user.id)
-    )
+    profile_result = await db.execute(select(Profile).where(Profile.user_id == current_user.id))
     profile = profile_result.scalar_one_or_none()
     if profile is None:
         raise UserNotFoundException("User profile not found.")
@@ -77,9 +76,7 @@ async def get_document_url(
     The URL expires automatically after 10 minutes.
     """
     # Fetch document (RLS enforces workspace isolation automatically)
-    doc_result = await db.execute(
-        select(Document).where(Document.id == document_id)
-    )
+    doc_result = await db.execute(select(Document).where(Document.id == document_id))
     doc = doc_result.scalar_one_or_none()
     if doc is None:
         raise DocumentNotFoundException("Document not found or access denied.")
@@ -123,9 +120,7 @@ async def list_documents(
         except ValueError:
             pass
 
-    result = await db.execute(
-        query.order_by(Document.created_at.desc()).limit(limit)
-    )
+    result = await db.execute(query.order_by(Document.created_at.desc()).limit(limit))
     return cast(list[DocumentResponse], list(result.scalars().all()))
 
 
@@ -139,9 +134,7 @@ async def get_document(
     """
     Retrieve metadata and a temporary presigned download URL for a single document.
     """
-    result = await db.execute(
-        select(Document).where(Document.id == document_id)
-    )
+    result = await db.execute(select(Document).where(Document.id == document_id))
     doc = result.scalar_one_or_none()
     if doc is None:
         raise DocumentNotFoundException("Document not found or access denied.")
@@ -164,16 +157,12 @@ async def get_document_status(
     """
     Get the processing job status of an uploaded document.
     """
-    doc_result = await db.execute(
-        select(Document).where(Document.id == document_id)
-    )
+    doc_result = await db.execute(select(Document).where(Document.id == document_id))
     doc = doc_result.scalar_one_or_none()
     if doc is None:
         raise DocumentNotFoundException("Document not found or access denied.")
 
-    job_result = await db.execute(
-        select(UploadJob).where(UploadJob.document_id == document_id)
-    )
+    job_result = await db.execute(select(UploadJob).where(UploadJob.document_id == document_id))
     job = job_result.scalar_one_or_none()
     if job is None:
         # Fallback if job record is missing
@@ -196,9 +185,7 @@ async def get_document_chunks(
     """
     Retrieve hierarchical chunks (parents and their leaf children) for a document.
     """
-    doc_result = await db.execute(
-        select(Document).where(Document.id == document_id)
-    )
+    doc_result = await db.execute(select(Document).where(Document.id == document_id))
     doc = doc_result.scalar_one_or_none()
     if doc is None:
         raise DocumentNotFoundException("Document not found or access denied.")
@@ -210,5 +197,3 @@ async def get_document_chunks(
         .order_by(ParentChunk.page_start.asc(), ParentChunk.id.asc())
     )
     return cast(list[ParentChunkSchema], list(result.scalars().all()))
-
-

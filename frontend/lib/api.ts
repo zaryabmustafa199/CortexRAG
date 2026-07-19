@@ -66,7 +66,7 @@ api.interceptors.response.use(
         // Update the authorization header for the retried request
         originalRequest.headers["Authorization"] = `Bearer ${access_token}`;
         return api(originalRequest);
-      } catch (refreshError) {
+      } catch {
         // If refresh fails, clear token and reject
         setInMemoryToken(null);
         if (typeof window !== "undefined") {

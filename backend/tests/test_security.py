@@ -26,6 +26,7 @@ def test_html_input_sanitization():
     key = CreateAPIKeyRequest(name=html_key)
     assert key.name == "Prod-Key"
 
+
 def test_double_extension_rejection():
     # Double extensions containing script symbols must be rejected
     bad_filenames = [
@@ -37,7 +38,8 @@ def test_double_extension_rejection():
 
     # Simple regex match test from UploadService/validation
     import re
-    double_ext_pattern = r'\.(exe|sh|py|js|php|bat|cmd)\.[a-z]+$'
+
+    double_ext_pattern = r"\.(exe|sh|py|js|php|bat|cmd)\.[a-z]+$"
     for fname in bad_filenames:
         assert re.search(double_ext_pattern, fname, re.I) is not None
 
@@ -48,6 +50,7 @@ def test_double_extension_rejection():
     ]
     for fname in good_filenames:
         assert re.search(double_ext_pattern, fname, re.I) is None
+
 
 @pytest.mark.asyncio
 async def test_db_session_rls_activation(mock_user):
@@ -62,9 +65,7 @@ async def test_db_session_rls_activation(mock_user):
     # We want to mock AsyncSessionLocal context manager inside get_rls_db
     # To keep it simple, we manually run the block of get_rls_db
     async def get_db_stub(ws_id):
-        await mock_session.execute(
-            text(f"SET LOCAL app.workspace_id = '{ws_id}'")
-        )
+        await mock_session.execute(text(f"SET LOCAL app.workspace_id = '{ws_id}'"))
         yield mock_session
 
     # Run the generator to verify SET LOCAL is called
@@ -74,4 +75,3 @@ async def test_db_session_rls_activation(mock_user):
     assert mock_session.execute.call_count == 1
     call_arg = mock_session.execute.call_args[0][0]
     assert str(call_arg) == f"SET LOCAL app.workspace_id = '{workspace_id}'"
-

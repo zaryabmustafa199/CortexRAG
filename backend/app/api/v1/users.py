@@ -3,6 +3,7 @@ app/api/v1/users.py
 -------------------
 User profile and workspace management endpoints.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -40,6 +41,7 @@ ws_router = APIRouter(prefix="/workspaces", tags=["Workspaces"])
 
 # ── Profile ───────────────────────────────────────────────────────────────────
 
+
 @router.get("/me", response_model=UserDetailResponse)
 async def get_my_profile(
     current_user: User = Depends(get_current_user),
@@ -47,13 +49,12 @@ async def get_my_profile(
     """Return the authenticated user's profile including tier and limits."""
     async with AsyncSessionLocal() as db:
         result = await db.execute(
-            select(User)
-            .where(User.id == current_user.id)
-            .options(selectinload(User.profile))
+            select(User).where(User.id == current_user.id).options(selectinload(User.profile))
         )
         user = result.scalar_one_or_none()
         if user is None:
             from app.core.exceptions import UserNotFoundException
+
             raise UserNotFoundException()
         return UserDetailResponse.model_validate(user)
 
@@ -97,10 +98,13 @@ async def delete_account(
     async with AsyncSessionLocal() as db:
         service = UserService(db)
         await service.deactivate_account(current_user.id)
-    return MessageResponse(message="Account deactivated. Your data will be permanently deleted shortly.")
+    return MessageResponse(
+        message="Account deactivated. Your data will be permanently deleted shortly."
+    )
 
 
 # ── Workspaces ────────────────────────────────────────────────────────────────
+
 
 @ws_router.get("", response_model=list[WorkspaceResponse])
 async def list_workspaces(
@@ -129,12 +133,14 @@ async def create_workspace(
         from sqlalchemy import select as sa_select
 
         from app.models.user import Profile
+
         profile_result = await db.execute(
             sa_select(Profile).where(Profile.user_id == current_user.id)
         )
         profile = profile_result.scalar_one_or_none()
         if profile is None:
             from app.core.exceptions import UserNotFoundException
+
             raise UserNotFoundException("Profile not found.")
 
         service = WorkspaceService(db)
@@ -157,6 +163,7 @@ async def get_workspace(
         workspace = result.scalar_one_or_none()
         if workspace is None:
             from app.core.exceptions import WorkspaceNotFoundException
+
             raise WorkspaceNotFoundException()
 
         # Verify membership
@@ -168,6 +175,7 @@ async def get_workspace(
         )
         if member_result.scalar_one_or_none() is None:
             from app.core.exceptions import ForbiddenException
+
             raise ForbiddenException("You are not a member of this workspace.")
 
         return WorkspaceResponse.model_validate(workspace)
@@ -190,14 +198,14 @@ async def update_workspace(
         membership = member_result.scalar_one_or_none()
         if membership is None or membership.role != MemberRole.ADMIN:
             from app.core.exceptions import ForbiddenException
+
             raise ForbiddenException("Only workspace admins can rename the workspace.")
 
-        result = await db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
-        )
+        result = await db.execute(select(Workspace).where(Workspace.id == workspace_id))
         workspace = result.scalar_one_or_none()
         if workspace is None:
             from app.core.exceptions import WorkspaceNotFoundException
+
             raise WorkspaceNotFoundException()
 
         workspace.name = body.name
@@ -224,9 +232,7 @@ async def add_member(
     """Add a user to workspace. Requester must be ADMIN."""
     async with AsyncSessionLocal() as db:
         service = WorkspaceService(db)
-        member = await service.add_member(
-            workspace_id, current_user.id, body.user_id, body.role
-        )
+        member = await service.add_member(workspace_id, current_user.id, body.user_id, body.role)
         return WorkspaceMemberResponse.model_validate(member)
 
 

@@ -19,7 +19,6 @@ import {
   AlertCircle,
   FileText,
   ExternalLink,
-  ChevronRight,
   RefreshCw,
 } from "lucide-react";
 
@@ -105,7 +104,7 @@ export default function ChatPage() {
           setActiveSession(found);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to load sessions:", err);
       setError("Failed to load sessions.");
     } finally {
@@ -114,9 +113,12 @@ export default function ChatPage() {
   }, [activeWorkspaceId]);
 
   React.useEffect(() => {
-    fetchSessions();
-    setActiveSession(null);
-    setMessages([]);
+    const timer = setTimeout(() => {
+      fetchSessions();
+      setActiveSession(null);
+      setMessages([]);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [activeWorkspaceId, fetchSessions]);
 
   // Fetch messages in current session
@@ -129,7 +131,7 @@ export default function ChatPage() {
         params: { workspace_id: activeWorkspaceId }
       });
       setMessages(response.data);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to load messages:", err);
       setError("Failed to load message history.");
     } finally {
@@ -138,11 +140,14 @@ export default function ChatPage() {
   }, [activeWorkspaceId]);
 
   React.useEffect(() => {
-    if (activeSession) {
-      fetchMessages(activeSession.id);
-    } else {
-      setMessages([]);
-    }
+    const timer = setTimeout(() => {
+      if (activeSession) {
+        fetchMessages(activeSession.id);
+      } else {
+        setMessages([]);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [activeSession, fetchMessages]);
 
   // Start new session
@@ -156,7 +161,7 @@ export default function ChatPage() {
       const newSession: SessionItem = response.data;
       setSessions(prev => [newSession, ...prev]);
       setActiveSession(newSession);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to create session:", err);
       setError("Failed to create new session.");
     }
@@ -175,7 +180,7 @@ export default function ChatPage() {
         setMessages([]);
       }
       setDeletingSession(null);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to delete session:", err);
       setError("Failed to delete session.");
     } finally {
@@ -234,7 +239,6 @@ export default function ChatPage() {
 
     setMessages(prev => [...prev, userMsg, assistantPlaceholder]);
 
-    let sessionCreatedId: string | null = null;
     let currentSessionId = activeSession?.id || null;
 
     try {
@@ -297,7 +301,6 @@ export default function ChatPage() {
             try {
               const parsed = JSON.parse(jsonStr);
               if (parsed.session_id) {
-                sessionCreatedId = parsed.session_id;
                 currentSessionId = parsed.session_id;
               } else if (parsed.token) {
                 accumulatedText += parsed.token;
@@ -314,7 +317,7 @@ export default function ChatPage() {
               } else if (parsed.error) {
                 throw new Error(parsed.error);
               }
-            } catch (jsonErr) {
+            } catch {
               // Ignore JSON parse errors for incomplete chunks
             }
           }
@@ -334,9 +337,10 @@ export default function ChatPage() {
         }
       }
 
-    } catch (err: any) {
+    } catch (err) {
       console.error("Streaming error:", err);
-      setError(err.message || "An error occurred during response generation.");
+      const errMsg = err instanceof Error ? err.message : "An error occurred during response generation.";
+      setError(errMsg);
       setIsGenerating(false);
       // Remove the placeholder assistant message if it remained empty on crash
       setMessages(prev => prev.filter(msg => !(msg.id === tempAssistantMsgId && msg.content === "")));
@@ -352,7 +356,7 @@ export default function ChatPage() {
         params: { workspace_id: activeWorkspaceId }
       });
       window.open(response.data.url, "_blank");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to get document URL:", err);
       alert("Failed to load document link. It might have been deleted.");
     } finally {
@@ -601,7 +605,7 @@ export default function ChatPage() {
                 CortexRAG Chat Engine
               </h2>
               <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                Connect and query local document intelligence. Start a conversation session from the sidebar or click "New" to ask about your documents.
+                Connect and query local document intelligence. Start a conversation session from the sidebar or click &ldquo;New&rdquo; to ask about your documents.
               </p>
               
               <div className="grid grid-cols-2 gap-4 mt-8 w-full">
@@ -760,7 +764,7 @@ export default function ChatPage() {
             </div>
           </div>
           <p className="text-sm text-foreground">
-            Are you sure you want to delete <span className="font-semibold">"{deletingSession?.title}"</span>?
+            Are you sure you want to delete <span className="font-semibold">&ldquo;{deletingSession?.title}&rdquo;</span>?
           </p>
           <div className="flex justify-end space-x-2 pt-4 border-t border-border/20">
             <Button

@@ -51,8 +51,16 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(email, password);
-    } catch (err: any) {
-      const errMsg = err.response?.data?.error?.message || err.message || "Invalid credentials. Please try again.";
+    } catch (err) {
+      let errMsg = "Invalid credentials. Please try again.";
+      if (err && typeof err === "object" && "response" in err) {
+        const responseData = (err as { response?: { data?: { error?: { message?: string } } } }).response?.data;
+        if (responseData?.error?.message) {
+          errMsg = responseData.error.message;
+        }
+      } else if (err instanceof Error) {
+        errMsg = err.message;
+      }
       setApiError(errMsg);
     } finally {
       setIsSubmitting(false);
@@ -145,7 +153,7 @@ export default function LoginPage() {
               </Button>
 
               <div className="text-center text-sm text-muted-foreground">
-                Don't have an account?{" "}
+                {"Don't have an account? "}
                 <Link
                   href="/register"
                   className="font-medium text-primary hover:underline"

@@ -9,6 +9,7 @@ Key dependencies:
   - require_workspace()  — resolves + validates workspace and membership
   - require_pro()        — gates pro-only endpoints by profile tier
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -88,9 +89,7 @@ async def get_current_user(
 
         # Fetch user from DB
         async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                select(User).where(User.id == uuid.UUID(user_id_str))
-            )
+            result = await db.execute(select(User).where(User.id == uuid.UUID(user_id_str)))
             user = result.scalar_one_or_none()
             if user is None:
                 raise UserNotFoundException("Account not found.")
@@ -111,9 +110,7 @@ async def get_current_user(
 
         async with AsyncSessionLocal() as db:
             # Fetch API Key
-            key_result = await db.execute(
-                select(APIKey).where(APIKey.key_hash == key_hash)
-            )
+            key_result = await db.execute(select(APIKey).where(APIKey.key_hash == key_hash))
             api_key = key_result.scalar_one_or_none()
             if api_key is None or not api_key.is_active:
                 raise AuthenticationException("Invalid or inactive API key.")
@@ -123,9 +120,7 @@ async def get_current_user(
             await db.commit()
 
             # Fetch user
-            user_result = await db.execute(
-                select(User).where(User.id == api_key.user_id)
-            )
+            user_result = await db.execute(select(User).where(User.id == api_key.user_id))
             user = user_result.scalar_one_or_none()
             if user is None:
                 raise UserNotFoundException("Associated account not found.")
@@ -135,7 +130,6 @@ async def get_current_user(
         # Enforce per-key rate limit (60 requests / minute)
         check_rate_limit(f"key:{api_key.id}", limit=60, window=60)
         return user
-
 
 
 # ---------------------------------------------------------------------------
@@ -149,9 +143,8 @@ async def get_db_for_workspace(workspace_id: str = "") -> AsyncGenerator[AsyncSe
     async with AsyncSessionLocal() as session:
         if workspace_id:
             from sqlalchemy import text
-            await session.execute(
-                text(f"SET LOCAL app.workspace_id = '{workspace_id}'")
-            )
+
+            await session.execute(text(f"SET LOCAL app.workspace_id = '{workspace_id}'"))
         yield session
 
 
@@ -174,9 +167,7 @@ async def require_workspace(
     """
     async with AsyncSessionLocal() as db:
         # Fetch workspace
-        ws_result = await db.execute(
-            select(Workspace).where(Workspace.id == workspace_id)
-        )
+        ws_result = await db.execute(select(Workspace).where(Workspace.id == workspace_id))
         workspace = ws_result.scalar_one_or_none()
         if workspace is None:
             raise WorkspaceNotFoundException()
@@ -206,9 +197,7 @@ async def require_pro(
     Raises ForbiddenException if user's profile tier is 'free'.
     """
     async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(Profile).where(Profile.user_id == current_user.id)
-        )
+        result = await db.execute(select(Profile).where(Profile.user_id == current_user.id))
         profile = result.scalar_one_or_none()
         if profile is None or profile.tier != "pro":
             raise ForbiddenException(
@@ -244,13 +233,11 @@ async def get_rls_db(
     async with AsyncSessionLocal() as session:
         try:
             from sqlalchemy import text
-            await session.execute(
-                text(f"SET LOCAL app.workspace_id = '{workspace_id}'")
-            )
+
+            await session.execute(text(f"SET LOCAL app.workspace_id = '{workspace_id}'"))
             yield session
         except Exception:
             await session.rollback()
             raise
         finally:
             await session.close()
-

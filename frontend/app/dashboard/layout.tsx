@@ -83,8 +83,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       await createWorkspace(newWorkspaceName);
       setNewWorkspaceName("");
       setIsCreateModalOpen(false);
-    } catch (err: any) {
-      const errMsg = err.response?.data?.error?.message || "Failed to create workspace.";
+    } catch (err) {
+      let errMsg = "Failed to create workspace.";
+      if (err && typeof err === "object" && "response" in err) {
+        const responseData = (err as { response?: { data?: { error?: { message?: string } } } }).response?.data;
+        if (responseData?.error?.message) {
+          errMsg = responseData.error.message;
+        }
+      } else if (err instanceof Error) {
+        errMsg = err.message;
+      }
       setCreateError(errMsg);
     } finally {
       setIsCreatingWorkspace(false);

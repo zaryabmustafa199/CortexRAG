@@ -15,6 +15,7 @@ RLS activation:
   before the route handler runs any query.
   Workspace ID is injected by the JWT dependency into request.state.
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
@@ -43,7 +44,7 @@ engine = create_async_engine(
         # NOTE: asyncpg 0.29+ removed connect_timeout from connect() kwargs.
         # Connection timeouts are handled by pool_timeout at the SQLAlchemy level.
         "server_settings": {
-            "statement_timeout": "30000",   # 30-second hard kill on runaway queries
+            "statement_timeout": "30000",  # 30-second hard kill on runaway queries
             "application_name": "cortexrag_api",
         },
     },
@@ -57,7 +58,7 @@ engine = create_async_engine(
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False,   # objects remain usable after commit without re-fetch
+    expire_on_commit=False,  # objects remain usable after commit without re-fetch
     autocommit=False,
     autoflush=False,
 )
@@ -86,9 +87,7 @@ async def get_db(workspace_id: str = "") -> AsyncGenerator[AsyncSession, None]:
                 await session.execute(
                     # Using text() is safe here — workspace_id is a UUID
                     # validated by the JWT dependency, never raw user input.
-                    __import__("sqlalchemy").text(
-                        f"SET LOCAL app.workspace_id = '{workspace_id}'"
-                    )
+                    __import__("sqlalchemy").text(f"SET LOCAL app.workspace_id = '{workspace_id}'")
                 )
             yield session
         except Exception:

@@ -1,7 +1,9 @@
 import os
 
 os.environ["JWT_SECRET"] = "mock_secret_strength_must_be_32_characters_long_min"
-os.environ["DATABASE_URL"] = "postgresql+asyncpg://cortexrag:cortexrag_dev_password@localhost:5434/cortexrag"
+os.environ["DATABASE_URL"] = (
+    "postgresql+asyncpg://cortexrag:cortexrag_dev_password@localhost:5434/cortexrag"
+)
 os.environ["REDIS_URL"] = "redis://localhost:6381/0"
 os.environ["CELERY_BROKER_URL"] = "redis://localhost:6381/0"
 os.environ["CELERY_RESULT_BACKEND"] = "redis://localhost:6381/0"
@@ -33,6 +35,7 @@ def mock_db():
     db.delete = AsyncMock()
     return db
 
+
 @pytest.fixture
 def mock_user():
     user = User(
@@ -42,6 +45,7 @@ def mock_user():
     )
     return user
 
+
 @pytest.fixture(autouse=True)
 def mock_redis(monkeypatch):
     mock = MagicMock()
@@ -50,6 +54,7 @@ def mock_redis(monkeypatch):
     mock.exists.return_value = False
     monkeypatch.setattr("app.core.redis_client.redis_client", mock)
     return mock
+
 
 @pytest.fixture
 def client(mock_user, mock_db):

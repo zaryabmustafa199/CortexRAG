@@ -4,6 +4,7 @@ app/worker/tasks/embedding.py
 Document embedding task logic for worker execution.
 Calls embedding service and inserts ChunkEmbedding records into the database.
 """
+
 from __future__ import annotations
 
 import structlog

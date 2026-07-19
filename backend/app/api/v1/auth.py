@@ -7,6 +7,7 @@ Cookie security:
   - Refresh token: HttpOnly, Secure (prod), SameSite=Strict, Path=/auth/refresh
   - Access token: returned in JSON body — stored in memory by frontend (not localStorage)
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Cookie, Depends, Request, Response

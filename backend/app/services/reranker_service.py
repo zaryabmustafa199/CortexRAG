@@ -8,6 +8,7 @@ NOTE: The original implementation used sentence_transformers.CrossEncoder (local
 which pulled 22GB of PyTorch+CUDA. This version uses Ollama's API directly via httpx,
 consistent with the rest of the stack. Scoring is done via LLM relevance prompt.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -57,10 +58,7 @@ class RerankerService:
                 base_url=settings.OLLAMA_BASE_URL,
                 timeout=httpx.Timeout(connect=5.0, read=30.0, write=10.0, pool=10.0),
             ) as client:
-                tasks = [
-                    self._score_chunk(client, query, item)
-                    for item in results
-                ]
+                tasks = [self._score_chunk(client, query, item) for item in results]
                 scored_results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Filter out exceptions — fall back to 0.0 score on error
@@ -83,10 +81,16 @@ class RerankerService:
             return final[:top_k]
 
         except TimeoutError:
-            logger.warning("reranker_timeout_fallback", msg="Rerank timed out. Falling back to RRF order.")
+            logger.warning(
+                "reranker_timeout_fallback", msg="Rerank timed out. Falling back to RRF order."
+            )
             return results[:top_k]
         except Exception as exc:
-            logger.warning("reranker_failed_fallback", error=str(exc), msg="Rerank failed. Falling back to RRF order.")
+            logger.warning(
+                "reranker_failed_fallback",
+                error=str(exc),
+                msg="Rerank failed. Falling back to RRF order.",
+            )
             return results[:top_k]
 
     async def _score_chunk(
@@ -96,7 +100,11 @@ class RerankerService:
         item: dict[str, Any],
     ) -> dict[str, Any]:
         """Score a single chunk for relevance using Ollama LLM."""
-        chunk_content = item["chunk"].content if hasattr(item.get("chunk"), "content") else str(item.get("chunk", ""))
+        chunk_content = (
+            item["chunk"].content
+            if hasattr(item.get("chunk"), "content")
+            else str(item.get("chunk", ""))
+        )
         prompt = _RERANK_PROMPT_TEMPLATE.format(
             query=query,
             passage=chunk_content[:1000],  # limit passage length
@@ -120,6 +128,7 @@ class RerankerService:
                 raw = response.json().get("response", "0.5").strip()
                 # Extract first float found in response
                 import re
+
                 match = re.search(r"\d+\.?\d*", raw)
                 score = float(match.group()) if match else 0.5
                 score = max(0.0, min(1.0, score))  # clamp to [0, 1]

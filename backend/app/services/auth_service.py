@@ -10,6 +10,7 @@ Engineering rules applied:
   - Refresh token rotation: each use invalidates the old token
   - Access token blacklist on logout (TTL = remaining JWT lifetime)
 """
+
 from __future__ import annotations
 
 import uuid
@@ -65,9 +66,7 @@ class AuthService:
             (user, access_token, raw_refresh_token)
         """
         # 1. Duplicate email check
-        existing = await self.db.execute(
-            select(User).where(User.email == email.lower().strip())
-        )
+        existing = await self.db.execute(select(User).where(User.email == email.lower().strip()))
         existing_user = existing.scalar_one_or_none()
         if existing_user is not None:
             raise ConflictException("An account with this email already exists.")
@@ -104,6 +103,7 @@ class AuthService:
 
         # 6. Add user as admin of their own workspace
         from app.models.workspace import MemberRole
+
         member = WorkspaceMember(
             workspace_id=workspace.id,
             user_id=user.id,
@@ -155,9 +155,7 @@ class AuthService:
             )
 
         # 2. Fetch user
-        result = await self.db.execute(
-            select(User).where(User.email == email_clean)
-        )
+        result = await self.db.execute(select(User).where(User.email == email_clean))
         user = result.scalar_one_or_none()
         if user is None:
             # Increment fail counter even for non-existent emails (prevent enumeration)
@@ -201,6 +199,7 @@ class AuthService:
             TokenRevokedException — if token not found in Redis (already used or expired)
         """
         import hashlib
+
         token_hash = hashlib.sha256(raw_refresh_token.encode()).hexdigest()
 
         # Scan Redis for this token hash across all users
@@ -210,9 +209,7 @@ class AuthService:
             user_id = key.split(":")[1]
 
             # Verify user still exists
-            result = await self.db.execute(
-                select(User).where(User.id == uuid.UUID(user_id))
-            )
+            result = await self.db.execute(select(User).where(User.id == uuid.UUID(user_id)))
             user = result.scalar_one_or_none()
             if user is None:
                 raise TokenRevokedException()
@@ -225,9 +222,7 @@ class AuthService:
             return new_access, new_raw_refresh
 
         # Token not found → already used or expired
-        raise TokenRevokedException(
-            "Refresh token is invalid or expired. Please log in again."
-        )
+        raise TokenRevokedException("Refresh token is invalid or expired. Please log in again.")
 
     async def logout(self, access_token: str, user_id: str) -> None:
         """
@@ -236,6 +231,7 @@ class AuthService:
         Refresh tokens are left to expire naturally (they are short-lived and single-use).
         """
         from jose import jwt as jose_jwt
+
         try:
             payload = jose_jwt.decode(
                 access_token,

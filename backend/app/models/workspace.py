@@ -7,6 +7,7 @@ RLS is enforced at the DB level for all child tables (documents, chunks, etc.)
 using workspace_id. The Workspace table itself is filtered by owner_id
 in the application layer.
 """
+
 from __future__ import annotations
 
 import enum
@@ -29,9 +30,7 @@ class MemberRole(str, enum.Enum):
 class Workspace(Base):
     __tablename__ = "workspaces"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
@@ -77,7 +76,9 @@ class WorkspaceMember(Base):
         nullable=False,
     )
     role: Mapped[MemberRole] = mapped_column(
-        Enum(MemberRole, name="member_role", values_callable=lambda x: [e.value for e in x]), default=MemberRole.EDITOR, nullable=False
+        Enum(MemberRole, name="member_role", values_callable=lambda x: [e.value for e in x]),
+        default=MemberRole.EDITOR,
+        nullable=False,
     )
     invited_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

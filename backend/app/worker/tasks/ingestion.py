@@ -4,6 +4,7 @@ app/worker/tasks/ingestion.py
 Master Celery ingestion task.
 Coordinates download, extraction, chunking, LLM summarization, and embedding generation.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -30,17 +31,13 @@ async def mark_job_as_failed(job_id: str, error_message: str) -> None:
     """Helper to mark a job and document as FAILED in the database and publish notification."""
     await engine.dispose()
     async with AsyncSessionLocal() as db:
-        job_result = await db.execute(
-            select(UploadJob).where(UploadJob.id == uuid.UUID(job_id))
-        )
+        job_result = await db.execute(select(UploadJob).where(UploadJob.id == uuid.UUID(job_id)))
         job = job_result.scalar_one_or_none()
         if job:
             job.status = "FAILED"
             job.error_message = error_message
 
-            doc_result = await db.execute(
-                select(Document).where(Document.id == job.document_id)
-            )
+            doc_result = await db.execute(select(Document).where(Document.id == job.document_id))
             doc = doc_result.scalar_one_or_none()
             if doc:
                 doc.status = DocumentStatus.FAILED
@@ -49,11 +46,13 @@ async def mark_job_as_failed(job_id: str, error_message: str) -> None:
                 # Publish failure event
                 redis_client.publish(
                     f"cortex:notify:{doc.workspace_id}",
-                    json.dumps({
-                        "type": "DOCUMENT_FAILED",
-                        "document_id": str(doc.id),
-                        "error": error_message,
-                    })
+                    json.dumps(
+                        {
+                            "type": "DOCUMENT_FAILED",
+                            "document_id": str(doc.id),
+                            "error": error_message,
+                        }
+                    ),
                 )
             await db.commit()
 
@@ -63,16 +62,12 @@ async def run_ingest_pipeline(job_id: str, correlation_id: str | None = None) ->
     await engine.dispose()
     async with AsyncSessionLocal() as db:
         # 1. Fetch Job and Document records
-        job_result = await db.execute(
-            select(UploadJob).where(UploadJob.id == uuid.UUID(job_id))
-        )
+        job_result = await db.execute(select(UploadJob).where(UploadJob.id == uuid.UUID(job_id)))
         job = job_result.scalar_one_or_none()
         if job is None:
             raise ValueError(f"Ingestion failed: Job {job_id} not found.")
 
-        doc_result = await db.execute(
-            select(Document).where(Document.id == job.document_id)
-        )
+        doc_result = await db.execute(select(Document).where(Document.id == job.document_id))
         doc = doc_result.scalar_one_or_none()
         if doc is None:
             raise ValueError(f"Ingestion failed: Document associated with Job {job_id} not found.")
@@ -95,11 +90,13 @@ async def run_ingest_pipeline(job_id: str, correlation_id: str | None = None) ->
             # 6. Publish success notification to Redis Pub/Sub
             redis_client.publish(
                 f"cortex:notify:{doc.workspace_id}",
-                json.dumps({
-                    "type": "DOCUMENT_READY",
-                    "document_id": str(doc.id),
-                    "status": "READY",
-                })
+                json.dumps(
+                    {
+                        "type": "DOCUMENT_READY",
+                        "document_id": str(doc.id),
+                        "status": "READY",
+                    }
+                ),
             )
             logger.info("ingestion_pipeline_success", job_id=job_id, doc_id=str(doc.id))
 
@@ -114,11 +111,13 @@ async def run_ingest_pipeline(job_id: str, correlation_id: str | None = None) ->
 
             redis_client.publish(
                 f"cortex:notify:{doc.workspace_id}",
-                json.dumps({
-                    "type": "DOCUMENT_FAILED",
-                    "document_id": str(doc.id),
-                    "error": exc.message,
-                })
+                json.dumps(
+                    {
+                        "type": "DOCUMENT_FAILED",
+                        "document_id": str(doc.id),
+                        "error": exc.message,
+                    }
+                ),
             )
         except Exception as exc:
             # Transient/unexpected exception — will bubble up to be retried by Celery
@@ -144,10 +143,17 @@ def ingest_document(self: Any, job_id: str, correlation_id: str) -> None:
         # If all retries are exhausted, fail the job and document permanently
         if self.request.retries >= self.max_retries:
             logger.critical("ingestion_task_failed_permanently", job_id=job_id, error=str(exc))
-            asyncio.run(mark_job_as_failed(job_id, f"Processing failed after 3 attempts: {str(exc)}"))
+            asyncio.run(
+                mark_job_as_failed(job_id, f"Processing failed after 3 attempts: {str(exc)}")
+            )
             return
 
         # Retry task with exponential backoff (e.g. 2, 4, 8 seconds + 2 seconds buffer)
-        countdown = (2 ** self.request.retries) + 2
-        logger.warning("ingestion_task_retrying", job_id=job_id, attempt=self.request.retries + 1, delay=countdown)
+        countdown = (2**self.request.retries) + 2
+        logger.warning(
+            "ingestion_task_retrying",
+            job_id=job_id,
+            attempt=self.request.retries + 1,
+            delay=countdown,
+        )
         raise self.retry(exc=exc, countdown=countdown)

@@ -12,7 +12,10 @@ async def main():
         print("Cleaning up database...")
         await session.execute(text("TRUNCATE TABLE users CASCADE;"))
         await session.commit()
-        print("Database reset successfully! All users, workspaces, documents, and messages have been cleared.")
+        print(
+            "Database reset successfully! All users, workspaces, documents, and messages have been cleared."
+        )
+
 
 if __name__ == "__main__":
     asyncio.run(main())

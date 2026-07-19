@@ -3,6 +3,7 @@ app/services/context_builder.py
 -------------------------------
 Formats retrieved leaf chunks into a structured context block for LLM prompts.
 """
+
 from __future__ import annotations
 
 from typing import Any

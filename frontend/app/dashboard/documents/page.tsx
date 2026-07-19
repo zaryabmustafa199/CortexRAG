@@ -14,8 +14,6 @@ import {
   Trash2,
   ExternalLink,
   RefreshCw,
-  Search,
-  Eye,
   AlertCircle,
   Database,
   Sparkles,
@@ -86,7 +84,10 @@ export default function DocumentsPage() {
   }, [activeWorkspaceId]);
 
   React.useEffect(() => {
-    fetchDocuments();
+    const timer = setTimeout(() => {
+      fetchDocuments();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchDocuments]);
 
   // Real-time status update handler via WebSocket
@@ -149,8 +150,16 @@ export default function DocumentsPage() {
       });
       setUploadProgress(null);
       fetchDocuments(); // Refresh list to show PENDING file
-    } catch (error: any) {
-      const errMsg = error.response?.data?.error?.message || "File upload failed. Unsupported type or file size exceeded.";
+    } catch (error) {
+      let errMsg = "File upload failed. Unsupported type or file size exceeded.";
+      if (error && typeof error === "object" && "response" in error) {
+        const responseData = (error as { response?: { data?: { error?: { message?: string } } } }).response?.data;
+        if (responseData?.error?.message) {
+          errMsg = responseData.error.message;
+        }
+      } else if (error instanceof Error) {
+        errMsg = error.message;
+      }
       setUploadError(errMsg);
       setUploadProgress(null);
     }
@@ -465,7 +474,7 @@ export default function DocumentsPage() {
                           <Sparkles className="h-3 w-3 mr-1" />
                           AI Section Summary:
                         </span>
-                        <p className="text-muted-foreground italic">"{parent.summary}"</p>
+                        <p className="text-muted-foreground italic">&ldquo;{parent.summary}&rdquo;</p>
                       </div>
                     )}
 

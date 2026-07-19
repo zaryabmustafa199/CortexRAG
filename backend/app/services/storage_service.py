@@ -4,6 +4,7 @@ app/services/storage_service.py
 S3-compatible file storage service using MinIO.
 Runs synchronous MinIO operations in a thread pool to avoid blocking the FastAPI event loop.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -62,16 +63,25 @@ async def store_file(workspace_id: str, content: bytes, suffix: str) -> str:
     try:
         # Run synchronous MinIO call in thread executor
         await asyncio.wait_for(
-            asyncio.get_event_loop().run_in_executor(None, _upload),
-            timeout=30.0
+            asyncio.get_event_loop().run_in_executor(None, _upload), timeout=30.0
         )
-        logger.info("minio_file_stored", workspace_id=workspace_id, storage_key=storage_key, size_bytes=len(content))
+        logger.info(
+            "minio_file_stored",
+            workspace_id=workspace_id,
+            storage_key=storage_key,
+            size_bytes=len(content),
+        )
         return storage_key
     except TimeoutError:
         logger.error("minio_upload_timeout", workspace_id=workspace_id, storage_key=storage_key)
         raise StorageException("File storage upload timed out.")
     except Exception as exc:
-        logger.error("minio_upload_failed", workspace_id=workspace_id, storage_key=storage_key, error=str(exc))
+        logger.error(
+            "minio_upload_failed",
+            workspace_id=workspace_id,
+            storage_key=storage_key,
+            error=str(exc),
+        )
         raise StorageException("Failed to store file in object storage.")
 
 
@@ -92,8 +102,7 @@ async def get_file(storage_key: str) -> bytes:
 
     try:
         content = await asyncio.wait_for(
-            asyncio.get_event_loop().run_in_executor(None, _download),
-            timeout=30.0
+            asyncio.get_event_loop().run_in_executor(None, _download), timeout=30.0
         )
         return bytes(content)
     except TimeoutError:
@@ -112,11 +121,13 @@ async def get_presigned_url(storage_key: str) -> str:
     bucket = settings.MINIO_BUCKET
 
     def _get_url() -> str:
-        return str(minio_client.presigned_get_object(
-            bucket_name=bucket,
-            object_name=storage_key,
-            expires=timedelta(minutes=10),
-        ))
+        return str(
+            minio_client.presigned_get_object(
+                bucket_name=bucket,
+                object_name=storage_key,
+                expires=timedelta(minutes=10),
+            )
+        )
 
     try:
         url = await asyncio.get_event_loop().run_in_executor(None, _get_url)

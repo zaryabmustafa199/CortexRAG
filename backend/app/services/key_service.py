@@ -3,6 +3,7 @@ app/services/key_service.py
 ----------------------------
 Business logic for API key generation, validation, and deactivation.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -49,9 +50,7 @@ class KeyService:
     async def list_keys(self, user_id: uuid.UUID) -> list[APIKey]:
         """List all API keys belonging to the user, ordered by creation date."""
         result = await self.db.execute(
-            select(APIKey)
-            .where(APIKey.user_id == user_id)
-            .order_by(APIKey.created_at.desc())
+            select(APIKey).where(APIKey.user_id == user_id).order_by(APIKey.created_at.desc())
         )
         return list(result.scalars().all())
 
@@ -64,7 +63,9 @@ class KeyService:
         if api_key is None:
             # ForbiddenException is the closest semantic match for a missing resource
             # that belongs to the authenticated user (avoids exposing whether IDs exist).
-            raise ForbiddenException("API key not found or you do not have permission to deactivate it.")
+            raise ForbiddenException(
+                "API key not found or you do not have permission to deactivate it."
+            )
 
         api_key.is_active = False
         await self.db.commit()
@@ -78,9 +79,7 @@ class KeyService:
         """
         key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
 
-        result = await self.db.execute(
-            select(APIKey).where(APIKey.key_hash == key_hash)
-        )
+        result = await self.db.execute(select(APIKey).where(APIKey.key_hash == key_hash))
         api_key = result.scalar_one_or_none()
         if api_key is None or not api_key.is_active:
             raise AuthenticationException("Invalid or inactive API key.")
@@ -90,9 +89,7 @@ class KeyService:
         await self.db.commit()
 
         # Fetch associated user
-        user_result = await self.db.execute(
-            select(User).where(User.id == api_key.user_id)
-        )
+        user_result = await self.db.execute(select(User).where(User.id == api_key.user_id))
         user = user_result.scalar_one_or_none()
         if user is None or not user.is_active:
             raise AuthenticationException("Associated user account is inactive or not found.")

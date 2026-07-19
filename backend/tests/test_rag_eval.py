@@ -29,14 +29,16 @@ Return your score in the exact format: SCORE: <value> (e.g. SCORE: 1.0).
 Provide a one-sentence explanation.
 """
 
+
 def parse_judge_score(response_text: str) -> float:
     """Helper to parse SCORE: <val> from judge output."""
-    match = re.search(r'SCORE:\s*([0-9\.]+)', response_text)
+    match = re.search(r"SCORE:\s*([0-9\.]+)", response_text)
     if match:
         return float(match.group(1))
     return 0.0
 
-def test_evaluation_prompt_generation():
+
+def test_evaluation_prompt_generation() -> None:
     question = "What is the storage size limit for Free tier?"
     context = "Free tier profiles have a limit of 5 documents and 10MB of storage."
     answer = "The Free tier supports a maximum storage size of 10MB."
@@ -51,7 +53,8 @@ def test_evaluation_prompt_generation():
     assert context in groundedness_prompt
     assert answer in groundedness_prompt
 
-def test_score_parser():
+
+def test_score_parser() -> None:
     # Test valid scores
     assert parse_judge_score("Explanation of RAG. SCORE: 0.95") == 0.95
     assert parse_judge_score("SCORE:1.0 is the grade.") == 1.0
@@ -60,7 +63,8 @@ def test_score_parser():
     # Test fallback
     assert parse_judge_score("No score found here.") == 0.0
 
-def test_mock_rag_quality_judge():
+
+def test_mock_rag_quality_judge() -> None:
     # Simulated judge outputs
     mock_precision_reply = "The retrieved context contains all constraints. SCORE: 1.0"
     mock_groundedness_reply = "The answer directly matches the 10MB limit. SCORE: 1.0"

@@ -33,6 +33,7 @@ def test_rrf_merging_math():
     assert scores["chunk_B"] > scores["chunk_A"]
     assert scores["chunk_A"] > scores["chunk_C"]
 
+
 def test_citation_extraction():
     citation_service = CitationService()
 
@@ -71,6 +72,7 @@ def test_citation_extraction():
     assert citations[1]["section_title"] == "Data Analysis"
     assert citations[1]["confidence_score"] == 0.45
 
+
 def test_cache_payload_serialization():
     # Check that cache json serializes citation floats and UUIDs correctly
     chunk_uuid = uuid.uuid4()
@@ -86,12 +88,14 @@ def test_cache_payload_serialization():
     # Prepare serializable dict
     serializable = []
     for c in citations_data:
-        serializable.append({
-            "chunk_id": str(c["chunk_id"]),
-            "page_number": c["page_number"],
-            "section_title": c["section_title"],
-            "confidence_score": c["confidence_score"],
-        })
+        serializable.append(
+            {
+                "chunk_id": str(c["chunk_id"]),
+                "page_number": c["page_number"],
+                "section_title": c["section_title"],
+                "confidence_score": c["confidence_score"],
+            }
+        )
 
     payload = {
         "reply": "Cached text",

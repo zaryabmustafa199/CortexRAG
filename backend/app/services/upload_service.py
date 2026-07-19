@@ -4,6 +4,7 @@ app/services/upload_service.py
 Handles document upload validation (size, extension, double extension, magic bytes)
 and orchestrates the database record creation and Celery ingestion dispatch.
 """
+
 from __future__ import annotations
 
 import re
@@ -91,6 +92,7 @@ class UploadService:
         detected_mime = None
         try:
             import magic
+
             detected_mime = magic.from_buffer(content[:2048], mime=True)
         except Exception as exc:
             # Fallback gracefully if libmagic is not installed on system (e.g., local Windows)

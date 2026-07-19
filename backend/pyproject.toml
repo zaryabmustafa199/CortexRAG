@@ -87,6 +87,7 @@ ignore = ["E501", "B904", "B905", "F821", "SIM102", "C414", "W293", "B007", "SIM
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+exclude = ["alembic/", "tests/"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

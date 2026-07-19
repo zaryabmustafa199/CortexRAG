@@ -19,6 +19,7 @@ def test_password_hashing():
     assert verify_password(password, hashed)
     assert not verify_password("wrong_password", hashed)
 
+
 def test_password_complexity_validation():
     # Weak password - missing number
     with pytest.raises(ValidationError) as excinfo:
@@ -39,6 +40,7 @@ def test_password_complexity_validation():
     req = ChangePasswordRequest(current_password="oldPassword1!", new_password="StrongPassword123!")
     assert req.new_password == "StrongPassword123!"
 
+
 def test_jwt_token_flow():
     subject = str(uuid.uuid4())
     token = create_access_token(subject=subject, extra_claims={"role": "admin"})
@@ -47,6 +49,7 @@ def test_jwt_token_flow():
     assert decoded["sub"] == subject
     assert decoded["role"] == "admin"
     assert decoded["type"] == "access"
+
 
 def test_jwt_decode_failure():
     with pytest.raises(AuthenticationException):

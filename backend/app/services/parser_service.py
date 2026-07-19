@@ -4,6 +4,7 @@ app/services/parser_service.py
 Text extraction service for PDF, DOCX, TXT, and MD files.
 Extracts text page-by-page or block-by-block streaming to prevent RAM exhaustion.
 """
+
 from __future__ import annotations
 
 import io
@@ -24,7 +25,7 @@ def extract_text_streaming(
     """
     Stream text from file bytes page-by-page/block-by-block.
     Yields dicts with format: {"page": page_number, "text": page_text}.
-    
+
     Raises:
         FileParsingException — if the document cannot be parsed or has unsupported formatting.
     """

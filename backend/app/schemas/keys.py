@@ -3,6 +3,7 @@ app/schemas/keys.py
 -------------------
 Pydantic schemas for API key management endpoints.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -19,6 +20,7 @@ class CreateAPIKeyRequest(BaseModel):
 
 class APIKeyCreatedResponse(BaseModel):
     """Returned only once on key creation — raw_key shown once and never again."""
+
     id: uuid.UUID
     name: str
     raw_key: str
@@ -29,6 +31,7 @@ class APIKeyCreatedResponse(BaseModel):
 
 class APIKeyResponse(BaseModel):
     """Safe listing response — never includes raw_key."""
+
     id: uuid.UUID
     name: str
     is_active: bool

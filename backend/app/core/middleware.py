@@ -7,6 +7,7 @@ Order matters — applied bottom-up by Starlette (last added = first executed).
 Raw ASGI middleware is used instead of BaseHTTPMiddleware because BaseHTTPMiddleware
 breaks WebSocket connections by failing to handle ASGI WebSocket protocols properly.
 """
+
 from __future__ import annotations
 
 import secrets
@@ -114,10 +115,16 @@ class SecurityHeadersMiddleware:
                 headers.append((b"X-Content-Type-Options", b"nosniff"))
                 headers.append((b"X-Frame-Options", b"DENY"))
                 headers.append((b"X-XSS-Protection", b"0"))
-                headers.append((b"Content-Security-Policy", b"default-src 'none'; frame-ancestors 'none'; sandbox"))
-                headers.append((b"Strict-Transport-Security", b"max-age=31536000; includeSubDomains"))
+                headers.append(
+                    (
+                        b"Content-Security-Policy",
+                        b"default-src 'none'; frame-ancestors 'none'; sandbox",
+                    )
+                )
+                headers.append(
+                    (b"Strict-Transport-Security", b"max-age=31536000; includeSubDomains")
+                )
                 event["headers"] = headers
             await send(event)
 
         await self.app(scope, receive, send_wrapper)
-

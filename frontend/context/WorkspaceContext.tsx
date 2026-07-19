@@ -31,6 +31,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   // Refresh workspaces list from API
   const refreshWorkspaces = React.useCallback(async () => {
     if (!isAuthenticated) return;
+    setIsLoading(true);
     try {
       const response = await api.get("/workspaces");
       const list: Workspace[] = response.data;
@@ -79,14 +80,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch workspaces on auth status changes
   React.useEffect(() => {
-    if (isAuthenticated) {
-      setIsLoading(true);
-      refreshWorkspaces();
-    } else {
-      setWorkspaces([]);
-      setActiveWorkspaceIdState(null);
-      setIsLoading(false);
-    }
+    const timer = setTimeout(() => {
+      if (isAuthenticated) {
+        refreshWorkspaces();
+      } else {
+        setWorkspaces([]);
+        setActiveWorkspaceIdState(null);
+        setIsLoading(false);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [isAuthenticated, refreshWorkspaces]);
 
   const activeWorkspace = React.useMemo(() => {

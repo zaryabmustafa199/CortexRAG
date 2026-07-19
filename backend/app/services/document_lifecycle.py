@@ -7,6 +7,7 @@ Orchestrates secure document deactivation and cascade purging across storage lay
   3. Evicts cached queries from Redis.
   4. Cascade deletes SQL rows (chunks, embeddings, documents) under RLS.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -42,9 +43,7 @@ class DocumentLifecycleService:
         log.info("document_purge_started")
 
         # 1. Fetch the document (RLS enforces workspace isolation)
-        doc_result = await self.db.execute(
-            select(Document).where(Document.id == document_id)
-        )
+        doc_result = await self.db.execute(select(Document).where(Document.id == document_id))
         document = doc_result.scalar_one_or_none()
         if document is None:
             raise DocumentNotFoundException("Document not found or access denied.")
@@ -62,11 +61,7 @@ class DocumentLifecycleService:
             try:
                 await es_client.delete_by_query(
                     index=settings.ELASTICSEARCH_INDEX_CHUNKS,
-                    body={
-                        "query": {
-                            "ids": {"values": chunk_ids}
-                        }
-                    }
+                    body={"query": {"ids": {"values": chunk_ids}}},
                 )
                 log.info("elasticsearch_chunks_purged", count=len(chunk_ids))
             except Exception as exc:

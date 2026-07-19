@@ -11,10 +11,8 @@ import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import {
   Settings,
-  User,
   ShieldAlert,
   Key,
-  FolderLock,
   Plus,
   Trash2,
   Copy,
@@ -58,9 +56,21 @@ interface APIKeyItem {
   created_at: string;
 }
 
+const getErrorMessage = (err: unknown, defaultMsg: string): string => {
+  if (err && typeof err === "object" && "response" in err) {
+    const responseData = (err as { response?: { data?: { error?: { message?: string } } } }).response?.data;
+    if (responseData?.error?.message) {
+      return responseData.error.message;
+    }
+  } else if (err instanceof Error) {
+    return err.message;
+  }
+  return defaultMsg;
+};
+
 export default function SettingsPage() {
   const { activeWorkspaceId, refreshWorkspaces } = useWorkspace();
-  const { user, refreshSession, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   // Settings State
   const [usage, setUsage] = React.useState<UsageSummary | null>(null);
@@ -103,6 +113,32 @@ export default function SettingsPage() {
   const [deleteConfirmation, setDeleteConfirmation] = React.useState("");
   const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
+
+  // State handlers to prevent inline arrow functions in JSX (solves ESLint parser bugs)
+  const handleWorkspaceNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewWorkspaceName(e.target.value);
+  };
+  const handleInviteUserIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInviteUserId(e.target.value);
+  };
+  const handleInviteRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setInviteRole(e.target.value);
+  };
+  const handleKeyNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewKeyName(e.target.value);
+  };
+  const handleCurrentPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCurrentPassword(e.target.value);
+  };
+  const handleNewPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewPassword(e.target.value);
+  };
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setConfirmPassword(e.target.value);
+  };
+  const handleDeleteConfirmationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDeleteConfirmation(e.target.value);
+  };
 
   // Load usages, workspace details, and api keys
   const fetchUsage = React.useCallback(async () => {
@@ -147,12 +183,18 @@ export default function SettingsPage() {
   }, []);
 
   React.useEffect(() => {
-    fetchUsage();
-    fetchApiKeys();
+    const timer = setTimeout(() => {
+      fetchUsage();
+      fetchApiKeys();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchUsage, fetchApiKeys]);
 
   React.useEffect(() => {
-    fetchWorkspaceDetails();
+    const timer = setTimeout(() => {
+      fetchWorkspaceDetails();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [activeWorkspaceId, fetchWorkspaceDetails]);
 
   // Handle Mock Tier Toggle
@@ -169,7 +211,7 @@ export default function SettingsPage() {
       // if the token is still valid but the refresh endpoint returns an error,
       // causing the upgrade button to appear to silently do nothing.
       await fetchUsage();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to toggle tier:", err);
       alert("Failed to switch subscription tiers.");
     } finally {
@@ -187,8 +229,8 @@ export default function SettingsPage() {
       await api.put(`/workspaces/${activeWorkspaceId}`, { name: newWorkspaceName });
       await refreshWorkspaces();
       await fetchWorkspaceDetails();
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || "Failed to rename workspace.";
+    } catch (err) {
+      const msg = getErrorMessage(err, "Failed to rename workspace.");
       setRenameError(msg);
     } finally {
       setIsRenamingWorkspace(false);
@@ -208,8 +250,8 @@ export default function SettingsPage() {
       });
       setInviteUserId("");
       await fetchWorkspaceDetails();
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || "Failed to add workspace member. Check if User UUID exists.";
+    } catch (err) {
+      const msg = getErrorMessage(err, "Failed to add workspace member. Check if User UUID exists.");
       setInviteError(msg);
     } finally {
       setIsInviting(false);
@@ -223,8 +265,8 @@ export default function SettingsPage() {
     try {
       await api.delete(`/workspaces/${activeWorkspaceId}/members/${targetUserId}`);
       await fetchWorkspaceDetails();
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || "Failed to remove member.";
+    } catch (err) {
+      const msg = getErrorMessage(err, "Failed to remove member.");
       alert(msg);
     }
   };
@@ -240,8 +282,8 @@ export default function SettingsPage() {
       setCreatedKeyRaw(response.data.raw_key);
       setNewKeyName("");
       await fetchApiKeys();
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || "Failed to generate API key.";
+    } catch (err) {
+      const msg = getErrorMessage(err, "Failed to generate API key.");
       setKeyError(msg);
     } finally {
       setIsCreatingKey(false);
@@ -254,7 +296,7 @@ export default function SettingsPage() {
     try {
       await api.delete(`/keys/${keyId}`);
       await fetchApiKeys();
-    } catch (err: any) {
+    } catch {
       alert("Failed to deactivate API key.");
     }
   };
@@ -289,8 +331,8 @@ export default function SettingsPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || "Failed to update password. Verify complexity rules.";
+    } catch (err) {
+      const msg = getErrorMessage(err, "Failed to update password. Verify complexity rules.");
       setPasswordError(msg);
     } finally {
       setIsChangingPassword(false);
@@ -307,8 +349,8 @@ export default function SettingsPage() {
       await api.delete("/users/me", { data: { confirmation: "DELETE" } });
       alert("Account successfully deactivated. Logging out.");
       await logout();
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || "Failed to deactivate account.";
+    } catch (err) {
+      const msg = getErrorMessage(err, "Failed to deactivate account.");
       setDeleteError(msg);
       setIsDeletingAccount(false);
     }
@@ -431,7 +473,7 @@ export default function SettingsPage() {
                       type="text"
                       required
                       value={newWorkspaceName}
-                      onChange={(e) => setNewWorkspaceName(e.target.value)}
+                      onChange={handleWorkspaceNameChange}
                       placeholder="Workspace name"
                       className="flex h-10 w-full rounded-lg border border-input bg-background/50 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
                     />
@@ -468,7 +510,7 @@ export default function SettingsPage() {
                         type="text"
                         required
                         value={inviteUserId}
-                        onChange={(e) => setInviteUserId(e.target.value)}
+                        onChange={handleInviteUserIdChange}
                         placeholder="e.g. 550e8400-e29b-..."
                         className="flex h-9 w-full rounded-lg border border-input bg-background/50 px-3 py-1.5 text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       />
@@ -481,7 +523,7 @@ export default function SettingsPage() {
                       <select
                         id="invitee-role"
                         value={inviteRole}
-                        onChange={(e) => setInviteRole(e.target.value)}
+                        onChange={handleInviteRoleChange}
                         className="flex h-9 w-full rounded-lg border border-input bg-card px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         <option value="viewer">Viewer (Read Only)</option>
@@ -571,7 +613,7 @@ export default function SettingsPage() {
                   type="text"
                   required
                   value={newKeyName}
-                  onChange={(e) => setNewKeyName(e.target.value)}
+                  onChange={handleKeyNameChange}
                   placeholder="e.g. Ingestion Script"
                   className="flex h-10 w-full rounded-lg border border-input bg-background/50 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 />
@@ -662,7 +704,7 @@ export default function SettingsPage() {
                   type="password"
                   required
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onChange={handleCurrentPasswordChange}
                   className="flex h-9 w-full rounded-lg border border-input bg-background/50 px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 />
               </div>
@@ -677,7 +719,7 @@ export default function SettingsPage() {
                   type="password"
                   required
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={handleNewPasswordChange}
                   className="flex h-9 w-full rounded-lg border border-input bg-background/50 px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 />
               </div>
@@ -692,7 +734,7 @@ export default function SettingsPage() {
                   type="password"
                   required
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={handleConfirmPasswordChange}
                   className="flex h-9 w-full rounded-lg border border-input bg-background/50 px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 />
               </div>
@@ -744,7 +786,7 @@ export default function SettingsPage() {
                   type="text"
                   required
                   value={deleteConfirmation}
-                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  onChange={handleDeleteConfirmationChange}
                   placeholder="DELETE"
                   className="flex h-9 w-full rounded-lg border border-border/50 bg-background/50 px-3 py-1.5 text-xs font-bold text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
                 />

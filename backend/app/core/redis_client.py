@@ -11,6 +11,7 @@ Configuration enforced (§5.5):
   - max_connections=50
   - decode_responses=True (strings, not bytes)
 """
+
 from __future__ import annotations
 
 from redis.backoff import ExponentialBackoff

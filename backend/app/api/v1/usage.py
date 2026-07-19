@@ -3,6 +3,7 @@ app/api/v1/usage.py
 -------------------
 API endpoints for retrieving user usage records and quotas.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -32,9 +33,7 @@ async def get_my_usage(
     that dependency mandates a workspace_id query parameter.
     """
     async with AsyncSessionLocal() as db:
-        profile_result = await db.execute(
-            select(Profile).where(Profile.user_id == current_user.id)
-        )
+        profile_result = await db.execute(select(Profile).where(Profile.user_id == current_user.id))
         profile = profile_result.scalar_one_or_none()
         if profile is None:
             raise UserNotFoundException("User profile not found.")

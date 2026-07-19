@@ -3,6 +3,7 @@ app/schemas/workspace.py
 ------------------------
 Pydantic schemas for workspace and member management endpoints.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -20,8 +21,11 @@ class WorkspaceCreateRequest(BaseModel):
     @classmethod
     def name_safe_chars(cls, v: str) -> str:
         import re
+
         if not re.match(r"^[\w\s\-\.]+$", v):
-            raise ValueError("Workspace name may only contain letters, numbers, spaces, hyphens, and dots.")
+            raise ValueError(
+                "Workspace name may only contain letters, numbers, spaces, hyphens, and dots."
+            )
         return v.strip()
 
 

@@ -3,6 +3,7 @@ app/schemas/query.py
 --------------------
 Pydantic schemas for query session and RAG query ask endpoints.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -15,7 +16,9 @@ from app.core.sanitizer import SanitizedStr, SanitizedStrOptional
 
 
 class QueryRequest(BaseModel):
-    session_id: uuid.UUID | None = Field(None, description="UUID of existing session, or null to auto-create.")
+    session_id: uuid.UUID | None = Field(
+        None, description="UUID of existing session, or null to auto-create."
+    )
     workspace_id: uuid.UUID = Field(..., description="Target workspace.")
     question: SanitizedStr = Field(..., min_length=1, max_length=2000)
 
@@ -39,7 +42,10 @@ class CitationResponse(BaseModel):
         if hasattr(data, "chunk") and data.chunk is not None:
             data.chunk_content = data.chunk.content
             if hasattr(data.chunk, "parent") and data.chunk.parent is not None:
-                if hasattr(data.chunk.parent, "document") and data.chunk.parent.document is not None:
+                if (
+                    hasattr(data.chunk.parent, "document")
+                    and data.chunk.parent.document is not None
+                ):
                     data.document_name = data.chunk.parent.document.filename
                     data.document_id = data.chunk.parent.document.id
         return data
@@ -68,5 +74,6 @@ class QuerySessionResponse(BaseModel):
 
 
 class CreateSessionRequest(BaseModel):
-    title: SanitizedStrOptional = Field(None, max_length=500, description="Optional custom title for the session.")
-
+    title: SanitizedStrOptional = Field(
+        None, max_length=500, description="Optional custom title for the session."
+    )

@@ -4,6 +4,7 @@ app/services/citation_service.py
 Citation extraction and validation service.
 Parses, validates, and persists citations from the LLM response text.
 """
+
 from __future__ import annotations
 
 import re
@@ -28,7 +29,7 @@ class CitationService:
         Parse and validate citations in format [Source N] from response text.
         Returns a list of unique validated citation attributes.
         """
-        cited_indices = re.findall(r'\[Source (\d+)\]', response_text)
+        cited_indices = re.findall(r"\[Source (\d+)\]", response_text)
         valid_citations = []
         seen_chunk_ids = set()
 
@@ -45,12 +46,14 @@ class CitationService:
                 # Convert logit to basic confidence range [0, 1] if needed, or store as raw logit
                 confidence = float(rerank_score)
 
-                valid_citations.append({
-                    "chunk_id": chunk.id,
-                    "page_number": chunk.page_number,
-                    "section_title": chunk.section_title,
-                    "confidence_score": confidence,
-                })
+                valid_citations.append(
+                    {
+                        "chunk_id": chunk.id,
+                        "page_number": chunk.page_number,
+                        "section_title": chunk.section_title,
+                        "confidence_score": confidence,
+                    }
+                )
 
         return valid_citations
 

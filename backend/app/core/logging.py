@@ -14,6 +14,7 @@ Usage anywhere in the codebase:
 In Celery workers, bind the correlation_id from the task payload:
     logger = get_logger().bind(correlation_id=correlation_id, job_id=job_id)
 """
+
 from __future__ import annotations
 
 import logging
@@ -67,7 +68,8 @@ def configure_logging(json_logs: bool = True, log_level: str = "INFO") -> None:
         renderer = structlog.dev.ConsoleRenderer(colors=True)
 
     structlog.configure(
-        processors=shared_processors + [
+        processors=shared_processors
+        + [
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),

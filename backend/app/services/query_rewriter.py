@@ -4,6 +4,7 @@ app/services/query_rewriter.py
 Conversational query rewriter.
 Rewrites follow-up questions into standalone queries based on message history.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -39,7 +40,9 @@ class QueryRewriter:
             "into a self-contained, standalone search query. Do NOT answer the question. "
             "Output ONLY the rewritten standalone question and nothing else."
         )
-        prompt = f"History:\n{history_str}\n\nLatest Question: {current_query}\n\nStandalone Question:"
+        prompt = (
+            f"History:\n{history_str}\n\nLatest Question: {current_query}\n\nStandalone Question:"
+        )
 
         try:
             if settings.LLM_PROVIDER == "openai":
@@ -53,7 +56,7 @@ class QueryRewriter:
     async def _ollama_rewrite(self, system: str, prompt: str, fallback: str) -> str:
         async with httpx.AsyncClient(
             base_url=settings.OLLAMA_BASE_URL,
-            timeout=httpx.Timeout(connect=5.0, read=300.0, write=5.0, pool=5.0)
+            timeout=httpx.Timeout(connect=5.0, read=300.0, write=5.0, pool=5.0),
         ) as client:
             response = await asyncio.wait_for(
                 client.post(
@@ -67,10 +70,10 @@ class QueryRewriter:
                             "temperature": 0.0,
                             "num_predict": 40,
                             "num_ctx": 1024,
-                        }
-                    }
+                        },
+                    },
                 ),
-                timeout=120.0
+                timeout=120.0,
             )
             if response.status_code != 200:
                 raise LLMProviderException(f"Ollama returned status {response.status_code}")
@@ -88,12 +91,12 @@ class QueryRewriter:
                         "model": settings.OPENAI_LLM_MODEL,
                         "messages": [
                             {"role": "system", "content": system},
-                            {"role": "user", "content": prompt}
+                            {"role": "user", "content": prompt},
                         ],
                         "temperature": 0.0,
-                    }
+                    },
                 ),
-                timeout=15.0
+                timeout=15.0,
             )
             if response.status_code != 200:
                 raise LLMProviderException(f"OpenAI returned status {response.status_code}")

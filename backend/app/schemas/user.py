@@ -3,6 +3,7 @@ app/schemas/user.py
 -------------------
 Pydantic schemas for user and profile API endpoints.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -34,6 +35,7 @@ class UserDetailResponse(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     """Fields the user can self-update."""
+
     display_name: SanitizedStrOptional = Field(None, min_length=1, max_length=100)
 
 
@@ -62,6 +64,7 @@ class TierToggleRequest(BaseModel):
 
 class DeleteAccountRequest(BaseModel):
     """User must type 'DELETE' to confirm account deletion."""
+
     confirmation: str
 
     @field_validator("confirmation")

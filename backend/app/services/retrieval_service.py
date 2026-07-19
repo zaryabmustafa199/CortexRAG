@@ -4,6 +4,7 @@ app/services/retrieval_service.py
 Orchestrates parallel hybrid retrieval (pgvector semantic + Elasticsearch BM25 keyword).
 Merges and ranks results using Reciprocal Rank Fusion (RRF).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -113,10 +114,12 @@ class RetrievalService:
             # skip any chunk whose DB object failed to load
             chunk_obj: LeafChunk | None = chunk_map.get(chunk_id)
             if chunk_obj is not None:
-                final_results.append({
-                    "chunk": chunk_obj,
-                    "rrf_score": score,
-                })
+                final_results.append(
+                    {
+                        "chunk": chunk_obj,
+                        "rrf_score": score,
+                    }
+                )
 
         logger.info(
             "hybrid_search_success",

@@ -4,6 +4,7 @@ app/services/chunking_service.py
 Hierarchical chunking service (Parent-Child splitting).
 Splits document page lists into ParentChunks (~3000 tokens) and LeafChunks (~400 tokens, 50 token overlap).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -25,8 +26,7 @@ except Exception as exc:
 
 # Section header detection regex
 SECTION_HEADER_REGEX = re.compile(
-    r'^(?:#+\s+|SECTION\s+\d+|[IVXLCDM]+\.\s+)([A-Z\d\s,\.\-\'\"]{3,100})$',
-    re.MULTILINE
+    r"^(?:#+\s+|SECTION\s+\d+|[IVXLCDM]+\.\s+)([A-Z\d\s,\.\-\'\"]{3,100})$", re.MULTILINE
 )
 
 
@@ -79,7 +79,7 @@ def build_leaf_chunks(
     years_detected = sorted(list({int(y) for y in years_found}))
 
     # Split parent content into sentences
-    sentences = re.split(r'(?<=[.!?])\s+', parent_content)
+    sentences = re.split(r"(?<=[.!?])\s+", parent_content)
     leaves: list[dict[str, Any]] = []
     current_sentences: list[str] = []
     current_tokens = 0
@@ -99,14 +99,16 @@ def build_leaf_chunks(
         if sent_tokens > (400 - prefix_tokens):
             if current_sentences:
                 content = metadata_prefix + " ".join(current_sentences)
-                leaves.append({
-                    "content": content,
-                    "chunk_index": chunk_index,
-                    "token_count": token_len(content),
-                    "years_detected": years_detected,
-                    "page_number": page_start,
-                    "section_title": section_title,
-                })
+                leaves.append(
+                    {
+                        "content": content,
+                        "chunk_index": chunk_index,
+                        "token_count": token_len(content),
+                        "years_detected": years_detected,
+                        "page_number": page_start,
+                        "section_title": section_title,
+                    }
+                )
                 chunk_index += 1
                 overlap_sents, overlap_tokens = get_overlap_sentences(current_sentences)
                 current_sentences = overlap_sents
@@ -120,14 +122,16 @@ def build_leaf_chunks(
                 if temp_tokens + word_tokens > (400 - prefix_tokens):
                     frag = " ".join(temp_words)
                     content = metadata_prefix + frag
-                    leaves.append({
-                        "content": content,
-                        "chunk_index": chunk_index,
-                        "token_count": token_len(content),
-                        "years_detected": years_detected,
-                        "page_number": page_start,
-                        "section_title": section_title,
-                    })
+                    leaves.append(
+                        {
+                            "content": content,
+                            "chunk_index": chunk_index,
+                            "token_count": token_len(content),
+                            "years_detected": years_detected,
+                            "page_number": page_start,
+                            "section_title": section_title,
+                        }
+                    )
                     chunk_index += 1
                     temp_words = temp_words[-5:]  # simple word overlap
                     temp_tokens = token_len(" ".join(temp_words))
@@ -140,14 +144,16 @@ def build_leaf_chunks(
             # Check if adding sentence violates boundary
             if current_tokens + sent_tokens + prefix_tokens > 400:
                 content = metadata_prefix + " ".join(current_sentences)
-                leaves.append({
-                    "content": content,
-                    "chunk_index": chunk_index,
-                    "token_count": token_len(content),
-                    "years_detected": years_detected,
-                    "page_number": page_start,
-                    "section_title": section_title,
-                })
+                leaves.append(
+                    {
+                        "content": content,
+                        "chunk_index": chunk_index,
+                        "token_count": token_len(content),
+                        "years_detected": years_detected,
+                        "page_number": page_start,
+                        "section_title": section_title,
+                    }
+                )
                 chunk_index += 1
                 overlap_sents, overlap_tokens = get_overlap_sentences(current_sentences)
                 current_sentences = overlap_sents
@@ -158,14 +164,16 @@ def build_leaf_chunks(
 
     if current_sentences:
         content = metadata_prefix + " ".join(current_sentences)
-        leaves.append({
-            "content": content,
-            "chunk_index": chunk_index,
-            "token_count": token_len(content),
-            "years_detected": years_detected,
-            "page_number": page_start,
-            "section_title": section_title,
-        })
+        leaves.append(
+            {
+                "content": content,
+                "chunk_index": chunk_index,
+                "token_count": token_len(content),
+                "years_detected": years_detected,
+                "page_number": page_start,
+                "section_title": section_title,
+            }
+        )
 
     return leaves
 
@@ -174,7 +182,7 @@ async def build_parent_chunks(pages: list[dict[str, int | str]]) -> list[dict[st
     """
     Group page streams into sections based on section headers, accumulated pages (max 5),
     or accumulated token count (~3000 tokens).
-    
+
     Yields control back to the event loop after each parent generation.
     """
     parents: list[dict[str, Any]] = []
@@ -196,15 +204,19 @@ async def build_parent_chunks(pages: list[dict[str, int | str]]) -> list[dict[st
         detected = detect_section_header(text)
 
         # If a header is detected or size limits exceeded, flush current accumulator
-        if (detected or len(current_pages) >= 5 or current_tokens + page_tokens > 3000) and current_pages:
+        if (
+            detected or len(current_pages) >= 5 or current_tokens + page_tokens > 3000
+        ) and current_pages:
             parent_text = "\n\n".join(current_pages)
-            parents.append({
-                "content": parent_text,
-                "section_title": section_title,
-                "page_start": page_start,
-                "page_end": page_num - 1,
-                "token_count": token_len(parent_text),
-            })
+            parents.append(
+                {
+                    "content": parent_text,
+                    "section_title": section_title,
+                    "page_start": page_start,
+                    "page_end": page_num - 1,
+                    "token_count": token_len(parent_text),
+                }
+            )
 
             # Reset counters
             current_pages = []
@@ -221,12 +233,14 @@ async def build_parent_chunks(pages: list[dict[str, int | str]]) -> list[dict[st
     # Flush final parent chunk
     if current_pages:
         parent_text = "\n\n".join(current_pages)
-        parents.append({
-            "content": parent_text,
-            "section_title": section_title,
-            "page_start": page_start,
-            "page_end": int(pages[-1]["page"]),
-            "token_count": token_len(parent_text),
-        })
+        parents.append(
+            {
+                "content": parent_text,
+                "section_title": section_title,
+                "page_start": page_start,
+                "page_end": int(pages[-1]["page"]),
+                "token_count": token_len(parent_text),
+            }
+        )
 
     return parents

@@ -6,6 +6,7 @@ Alembic environment configuration for async SQLAlchemy migrations.
 Reads DATABASE_URL from application settings (not from alembic.ini) so that
 the same .env file drives both the runtime app and migration scripts.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -46,6 +47,7 @@ target_metadata = Base.metadata
 
 # ── Migration runners ─────────────────────────────────────────────────────────
 
+
 def run_migrations_offline() -> None:
     """Emit SQL to stdout — used for generating SQL scripts without a DB."""
     context.configure(
@@ -62,7 +64,7 @@ def do_run_migrations(connection) -> None:  # type: ignore[type-arg]
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        compare_type=True,          # detect column type changes
+        compare_type=True,  # detect column type changes
         compare_server_default=True,
     )
     with context.begin_transaction():

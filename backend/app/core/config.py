@@ -5,6 +5,7 @@ Centralised settings loaded from environment variables via pydantic-settings.
 All configuration is validated at startup — if a required value is missing or
 invalid the application refuses to start.
 """
+
 from __future__ import annotations
 
 import sys
@@ -42,12 +43,12 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # ── Database ─────────────────────────────────────────────────────────────
-    DATABASE_URL: str          # postgresql+asyncpg://...
+    DATABASE_URL: str  # postgresql+asyncpg://...
     POSTGRES_HOST: str = "postgres"
     POSTGRES_PORT: int = 5432
 
     # ── Redis ─────────────────────────────────────────────────────────────────
-    REDIS_URL: str             # redis://redis:6379/0
+    REDIS_URL: str  # redis://redis:6379/0
     CELERY_BROKER_URL: str
     CELERY_RESULT_BACKEND: str
 
@@ -102,7 +103,7 @@ class Settings(BaseSettings):
         if v == "CHANGE_ME_generate_with_secrets_token_urlsafe_64" or len(v) < 32:
             print(
                 "\n[FATAL] JWT_SECRET is insecure or not set.\n"
-                "Generate one with:  python -c \"import secrets; print(secrets.token_urlsafe(64))\"\n"
+                'Generate one with:  python -c "import secrets; print(secrets.token_urlsafe(64))"\n'
                 "Then set it in your .env file.\n",
                 file=sys.stderr,
             )

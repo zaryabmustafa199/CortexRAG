@@ -5,6 +5,7 @@ RAG query endpoints.
 Handles multi-turn conversational ask queries, query rewriting, hybrid search, re-ranking,
 and streaming the LLM response via SSE (Server-Sent Events) with DB completion persistence.
 """
+
 from __future__ import annotations
 
 import asyncio  # Required for asyncio.get_event_loop() and asyncio.gather() calls
@@ -67,6 +68,7 @@ async def ask_question(
     # not in the URL query string — using it as a dep would cause a 422 conflict)
     async with AsyncSessionLocal() as db:
         from sqlalchemy import text as sa_text
+
         member_result = await db.execute(
             select(WorkspaceMember).where(
                 WorkspaceMember.workspace_id == body.workspace_id,
@@ -84,9 +86,7 @@ async def ask_question(
     # 1. Resolve or Create QuerySession
     session_id = body.session_id
     if session_id:
-        session_result = await db.execute(
-            select(QuerySession).where(QuerySession.id == session_id)
-        )
+        session_result = await db.execute(select(QuerySession).where(QuerySession.id == session_id))
         session = session_result.scalar_one_or_none()
         if session is None:
             raise SessionNotFoundException("Query session not found.")
@@ -118,9 +118,7 @@ async def ask_question(
 
     # 3. Fetch recent conversation history
     history_result = await db.execute(
-        select(Message)
-        .where(Message.session_id == session_id)
-        .order_by(Message.created_at.asc())
+        select(Message).where(Message.session_id == session_id).order_by(Message.created_at.asc())
     )
     # Exclude the user message we just inserted from the history when passing to rewriter
     history = list(history_result.scalars().all()[:-1])
@@ -167,7 +165,9 @@ async def ask_question(
 
                     # Persist messages and citations to DB
                     async with AsyncSessionLocal() as db_write:
-                        await db_write.execute(text(f"SET LOCAL app.workspace_id = '{body.workspace_id}'"))
+                        await db_write.execute(
+                            text(f"SET LOCAL app.workspace_id = '{body.workspace_id}'")
+                        )
                         assistant_msg = Message(
                             session_id=session_id,
                             workspace_id=body.workspace_id,
@@ -181,12 +181,16 @@ async def ask_question(
                         if cached_citations:
                             db_citations = []
                             for c in cached_citations:
-                                db_citations.append({
-                                    "chunk_id": uuid.UUID(c["chunk_id"]) if c.get("chunk_id") else None,
-                                    "page_number": c.get("page_number"),
-                                    "section_title": c.get("section_title"),
-                                    "confidence_score": c.get("confidence_score"),
-                                })
+                                db_citations.append(
+                                    {
+                                        "chunk_id": uuid.UUID(c["chunk_id"])
+                                        if c.get("chunk_id")
+                                        else None,
+                                        "page_number": c.get("page_number"),
+                                        "section_title": c.get("section_title"),
+                                        "confidence_score": c.get("confidence_score"),
+                                    }
+                                )
                             citation_service = CitationService()
                             await citation_service.save_citations(
                                 db=db_write,
@@ -202,7 +206,9 @@ async def ask_question(
                         )
                         await db_write.commit()
                 except Exception as cache_err:
-                    log.error("cached_stream_persistence_failed", error=str(cache_err), exc_info=True)
+                    log.error(
+                        "cached_stream_persistence_failed", error=str(cache_err), exc_info=True
+                    )
                     yield f"data: {json.dumps({'error': 'Failed to complete cached response.'})}\n\n"
 
             return StreamingResponse(sse_cached_generator(), media_type="text/event-stream")
@@ -241,7 +247,7 @@ async def ask_question(
         "Do NOT invent facts, assume facts not present, or extrapolate beyond the text.\n"
         "Cite every claim using the format: [Source N] where N is the source number (e.g. [Source 1]).\n"
         "If you cannot find the answer in the provided documents, say exactly: "
-        "\"I cannot find this in the provided documents.\""
+        '"I cannot find this in the provided documents."'
     )
     user_prompt = f"[CONTEXT]\n{context_block}\n\n[QUESTION]\n{rewritten_query}"
 
@@ -266,7 +272,9 @@ async def ask_question(
             if full_reply:
                 async with AsyncSessionLocal() as db_write:
                     # Enforce RLS setting in background completion thread
-                    await db_write.execute(text(f"SET LOCAL app.workspace_id = '{body.workspace_id}'"))
+                    await db_write.execute(
+                        text(f"SET LOCAL app.workspace_id = '{body.workspace_id}'")
+                    )
 
                     assistant_msg = Message(
                         session_id=session_id,
@@ -281,14 +289,11 @@ async def ask_question(
                     # Extract and save citations
                     citation_service = CitationService()
                     citations_data = citation_service.extract_citations(
-                        response_text=full_reply,
-                        retrieved_results=reranked_results
+                        response_text=full_reply, retrieved_results=reranked_results
                     )
                     if citations_data:
                         await citation_service.save_citations(
-                            db=db_write,
-                            message_id=assistant_msg.id,
-                            citations_data=citations_data
+                            db=db_write, message_id=assistant_msg.id, citations_data=citations_data
                         )
 
                     # Record query usage
@@ -305,12 +310,14 @@ async def ask_question(
                     try:
                         serializable_citations = []
                         for c in citations_data:
-                            serializable_citations.append({
-                                "chunk_id": str(c["chunk_id"]) if c.get("chunk_id") else None,
-                                "page_number": c.get("page_number"),
-                                "section_title": c.get("section_title"),
-                                "confidence_score": c.get("confidence_score"),
-                            })
+                            serializable_citations.append(
+                                {
+                                    "chunk_id": str(c["chunk_id"]) if c.get("chunk_id") else None,
+                                    "page_number": c.get("page_number"),
+                                    "section_title": c.get("section_title"),
+                                    "confidence_score": c.get("confidence_score"),
+                                }
+                            )
                         cache_payload = {
                             "reply": full_reply,
                             "citations": serializable_citations,
@@ -318,7 +325,7 @@ async def ask_question(
                         loop_write = asyncio.get_event_loop()
                         await loop_write.run_in_executor(
                             None,
-                            lambda: redis_client.setex(cache_key, 300, json.dumps(cache_payload))
+                            lambda: redis_client.setex(cache_key, 300, json.dumps(cache_payload)),
                         )
                     except Exception as cache_exc:
                         logger.error("failed_to_write_redis_cache", error=str(cache_exc))
@@ -402,9 +409,7 @@ async def get_session_messages(
     """
     Get paginated message history for a query session (cursor-based pagination).
     """
-    session_result = await db.execute(
-        select(QuerySession).where(QuerySession.id == session_id)
-    )
+    session_result = await db.execute(select(QuerySession).where(QuerySession.id == session_id))
     session = session_result.scalar_one_or_none()
     if session is None:
         raise SessionNotFoundException("Query session not found or access denied.")
@@ -443,9 +448,7 @@ async def delete_session(
     """
     Permanently delete a query session and its entire history.
     """
-    session_result = await db.execute(
-        select(QuerySession).where(QuerySession.id == session_id)
-    )
+    session_result = await db.execute(select(QuerySession).where(QuerySession.id == session_id))
     session = session_result.scalar_one_or_none()
     if session is None:
         raise SessionNotFoundException("Query session not found or access denied.")
@@ -453,4 +456,3 @@ async def delete_session(
     await db.delete(session)
     await db.commit()
     return Response(status_code=204)
-

@@ -26,7 +26,7 @@ export function useDocumentStatus(
         try {
           const parsedUrl = new URL(apiUrl);
           host = parsedUrl.host;
-        } catch (e) {
+        } catch {
           host = "localhost:8080";
         }
       } else {

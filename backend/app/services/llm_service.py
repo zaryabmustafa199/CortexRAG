@@ -5,6 +5,7 @@ LLM generation service.
 Supports streaming responses from Ollama (local) and OpenAI.
 Implements unified stream generators yielding tokens with strict timeouts.
 """
+
 from __future__ import annotations
 
 import json
@@ -54,7 +55,7 @@ class LLMService:
                 "temperature": 0.3,
                 "num_ctx": 4096,
                 "num_predict": 512,
-            }
+            },
         }
         if system_prompt:
             payload["system"] = system_prompt
@@ -72,7 +73,9 @@ class LLMService:
                 async with client.stream("POST", url, json=payload) as response:
                     if response.status_code != 200:
                         err_body = await response.aread()
-                        raise LLMProviderException(f"Ollama returned status {response.status_code}: {err_body.decode()}")
+                        raise LLMProviderException(
+                            f"Ollama returned status {response.status_code}: {err_body.decode()}"
+                        )
 
                     async for line in response.aiter_lines():
                         if not line.strip():
@@ -123,7 +126,9 @@ class LLMService:
                 ) as response:
                     if response.status_code != 200:
                         err_body = await response.aread()
-                        raise LLMProviderException(f"OpenAI returned status {response.status_code}: {err_body.decode()}")
+                        raise LLMProviderException(
+                            f"OpenAI returned status {response.status_code}: {err_body.decode()}"
+                        )
 
                     async for line in response.aiter_lines():
                         line = line.strip()
@@ -161,28 +166,17 @@ class LLMService:
         """Stream response from Google Gemini streamGenerateContent API."""
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_LLM_MODEL}:streamGenerateContent?alt=sse&key={settings.GEMINI_API_KEY}"
 
-        contents = [
-            {
-                "role": "user",
-                "parts": [
-                    {"text": prompt}
-                ]
-            }
-        ]
+        contents = [{"role": "user", "parts": [{"text": prompt}]}]
 
         payload = {
             "contents": contents,
             "generationConfig": {
                 "temperature": 0.3,
-            }
+            },
         }
 
         if system_prompt:
-            payload["systemInstruction"] = {
-                "parts": [
-                    {"text": system_prompt}
-                ]
-            }
+            payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
         timeout = httpx.Timeout(connect=5.0, read=120.0, write=15.0, pool=10.0)
 
@@ -195,7 +189,9 @@ class LLMService:
                 ) as response:
                     if response.status_code != 200:
                         err_body = await response.aread()
-                        raise LLMProviderException(f"Gemini returned status {response.status_code}: {err_body.decode()}")
+                        raise LLMProviderException(
+                            f"Gemini returned status {response.status_code}: {err_body.decode()}"
+                        )
 
                     async for line in response.aiter_lines():
                         line = line.strip()

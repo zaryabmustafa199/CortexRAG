@@ -3,6 +3,7 @@ app/services/usage_service.py
 -----------------------------
 Tracks monthly usage (token count, query count) and enforces subscription quotas.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -30,8 +31,7 @@ class UsageService:
 
         result = await self.db.execute(
             select(UsageRecord).where(
-                UsageRecord.user_id == user_id,
-                UsageRecord.month == start_of_month
+                UsageRecord.user_id == user_id, UsageRecord.month == start_of_month
             )
         )
         return result.scalar_one_or_none()
@@ -42,9 +42,7 @@ class UsageService:
         Raises QuotaExceededException if user exceeded limit.
         """
         # Fetch user's profile
-        profile_result = await self.db.execute(
-            select(Profile).where(Profile.user_id == user_id)
-        )
+        profile_result = await self.db.execute(select(Profile).where(Profile.user_id == user_id))
         profile = profile_result.scalar_one_or_none()
         if profile is None:
             raise UserNotFoundException("User profile not found.")
@@ -56,7 +54,7 @@ class UsageService:
                 "quota_limit_exceeded",
                 user_id=str(user_id),
                 query_count=usage_rec.query_count,
-                limit=profile.query_limit_monthly
+                limit=profile.query_limit_monthly,
             )
             raise QuotaExceededException("Monthly query limit reached for your plan.")
 
@@ -89,7 +87,9 @@ class UsageService:
         else:
             usage_rec.query_count += 1
             usage_rec.token_count += tokens_used
-            usage_rec.cost_usd = float(Decimal(str(float(usage_rec.cost_usd or 0))) + calculated_cost)
+            usage_rec.cost_usd = float(
+                Decimal(str(float(usage_rec.cost_usd or 0))) + calculated_cost
+            )
 
         await self.db.flush()
         logger.info(
@@ -97,5 +97,5 @@ class UsageService:
             user_id=str(user_id),
             tokens_added=tokens_used,
             total_tokens=usage_rec.token_count,
-            total_queries=usage_rec.query_count
+            total_queries=usage_rec.query_count,
         )

@@ -4,6 +4,7 @@ app/worker/tasks/chunking.py
 Orchestration function for document chunking on worker processes.
 Calls chunking service and saves ParentChunk and LeafChunk structures in the database.
 """
+
 from __future__ import annotations
 
 import structlog
@@ -35,6 +36,7 @@ async def chunk_and_save_document(
     leaf_models = []
 
     from app.services.summary_service import SummaryService
+
     summary_service = SummaryService()
 
     for parent_data in parent_data_list:
@@ -94,6 +96,7 @@ async def chunk_and_save_document(
     import asyncio
 
     from app.services.bm25_service import index_leaf_chunk
+
     es_tasks = [
         index_leaf_chunk(leaf.id, leaf.content, leaf.workspace_id, leaf.section_title)
         for leaf in leaf_models

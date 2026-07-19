@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userResponse.data);
       
       return access_token;
-    } catch (error) {
+    } catch {
       // Clear session if refresh fails
       setUser(null);
       setAccessToken(null);
@@ -123,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       await api.post("/auth/logout");
-    } catch (error) {
+    } catch {
       // Proceed with local cleanup even if backend request fails
     } finally {
       setUser(null);
@@ -152,7 +152,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Initial mount: try silent refresh
   React.useEffect(() => {
-    refreshSession();
+    const timer = setTimeout(() => {
+      refreshSession();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refreshSession]);
 
   // Periodic silent refresh timer before expiry

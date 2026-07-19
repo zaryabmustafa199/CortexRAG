@@ -10,6 +10,7 @@ Rules enforced:
   - Refresh tokens are stored as sha256(raw) in DB — never the raw value
   - All random/token generation uses `secrets` module, never `random`
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -42,6 +43,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 # ---------------------------------------------------------------------------
 # JWT tokens
 # ---------------------------------------------------------------------------
+
 
 def create_access_token(subject: str, extra_claims: dict[str, Any] | None = None) -> str:
     """
@@ -89,11 +91,15 @@ def decode_access_token(token: str) -> dict[str, Any]:
     """
     try:
         from typing import cast as _cast
-        payload: dict[str, Any] = _cast(dict[str, Any], jwt.decode(
-            token,
-            settings.JWT_SECRET,
-            algorithms=[settings.JWT_ALGORITHM],
-        ))
+
+        payload: dict[str, Any] = _cast(
+            dict[str, Any],
+            jwt.decode(
+                token,
+                settings.JWT_SECRET,
+                algorithms=[settings.JWT_ALGORITHM],
+            ),
+        )
         if payload.get("type") != "access":
             raise AuthenticationException("Invalid token type.")
         return payload

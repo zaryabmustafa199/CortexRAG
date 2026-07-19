@@ -4,6 +4,7 @@ app/services/summary_service.py
 Service for generating section summaries for ParentChunks using Ollama or OpenAI.
 Enforces a 3-retry configuration on timeout errors.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -40,16 +41,16 @@ class SummaryService:
 
         async with httpx.AsyncClient(
             base_url=settings.OLLAMA_BASE_URL,
-            timeout=httpx.Timeout(connect=5.0, read=30.0, write=15.0, pool=10.0)
+            timeout=httpx.Timeout(connect=5.0, read=30.0, write=15.0, pool=10.0),
         ) as client:
             for attempt in range(1, 2):  # Single attempt — summary is optional, fail fast on CPU
                 try:
                     response = await asyncio.wait_for(
-                         client.post(
-                             "/api/generate",
-                             json={"model": settings.LLM_MODEL, "prompt": prompt, "stream": False}
-                         ),
-                         timeout=30.0  # Fail fast on CPU-only; summary is optional
+                        client.post(
+                            "/api/generate",
+                            json={"model": settings.LLM_MODEL, "prompt": prompt, "stream": False},
+                        ),
+                        timeout=30.0,  # Fail fast on CPU-only; summary is optional
                     )
                     if response.status_code != 200:
                         raise LLMProviderException(f"Ollama returned status {response.status_code}")
@@ -81,12 +82,12 @@ class SummaryService:
                                 "model": settings.OPENAI_LLM_MODEL,
                                 "messages": [
                                     {"role": "system", "content": prompt},
-                                    {"role": "user", "content": text}
+                                    {"role": "user", "content": text},
                                 ],
                                 "temperature": 0.3,
-                            }
+                            },
                         ),
-                        timeout=60.0
+                        timeout=60.0,
                     )
                     if response.status_code != 200:
                         raise LLMProviderException(f"OpenAI returned status {response.status_code}")
@@ -94,7 +95,9 @@ class SummaryService:
                 except TimeoutError:
                     logger.warning("openai_summary_timeout", attempt=attempt)
                     if attempt == 3:
-                        raise LLMProviderException("OpenAI summarization timed out after 3 attempts.")
+                        raise LLMProviderException(
+                            "OpenAI summarization timed out after 3 attempts."
+                        )
                 except Exception as exc:
                     logger.warning("openai_summary_failed", attempt=attempt, error=str(exc))
                     if attempt == 3:
@@ -110,17 +113,10 @@ class SummaryService:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_LLM_MODEL}:generateContent?key={settings.GEMINI_API_KEY}"
 
         payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [
-                        {"text": f"{prompt}\n\nContent:\n{text}"}
-                    ]
-                }
-            ],
+            "contents": [{"role": "user", "parts": [{"text": f"{prompt}\n\nContent:\n{text}"}]}],
             "generationConfig": {
                 "temperature": 0.3,
-            }
+            },
         }
 
         async with httpx.AsyncClient(
@@ -128,12 +124,11 @@ class SummaryService:
         ) as client:
             for attempt in range(1, 4):
                 try:
-                    response = await asyncio.wait_for(
-                        client.post(url, json=payload),
-                        timeout=60.0
-                    )
+                    response = await asyncio.wait_for(client.post(url, json=payload), timeout=60.0)
                     if response.status_code != 200:
-                        raise LLMProviderException(f"Gemini returned status {response.status_code}: {response.text}")
+                        raise LLMProviderException(
+                            f"Gemini returned status {response.status_code}: {response.text}"
+                        )
 
                     data = response.json()
                     candidates = data.get("candidates", [])
@@ -149,7 +144,9 @@ class SummaryService:
                 except TimeoutError:
                     logger.warning("gemini_summary_timeout", attempt=attempt)
                     if attempt == 3:
-                        raise LLMProviderException("Gemini summarization timed out after 3 attempts.")
+                        raise LLMProviderException(
+                            "Gemini summarization timed out after 3 attempts."
+                        )
                 except Exception as exc:
                     logger.warning("gemini_summary_failed", attempt=attempt, error=str(exc))
                     if attempt == 3:

@@ -3,6 +3,7 @@ app/core/rate_limiter.py
 ------------------------
 Rate limiting using Redis.
 """
+
 from __future__ import annotations
 
 import time
@@ -19,7 +20,7 @@ def check_rate_limit(key: str, limit: int = 60, window: int = 60) -> None:
     """
     Check rate limit using a fixed window in Redis.
     Raises RateLimitException if the limit is exceeded.
-    
+
     Fails open on Redis connection issues.
     """
     current_bucket = int(time.time() // window)
